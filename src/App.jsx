@@ -4,6 +4,7 @@ import ImageUploader from './components/ImageUploader'
 import PromptInput from './components/PromptInput'
 import SubmitButton from './components/SubmitButton'
 import MoodSummary from './components/MoodSummary'
+import ProductGrid from './components/ProductGrid'
 
 // Mock data for testing - will be replaced by API response
 const MOCK_MOOD = {
@@ -24,6 +25,53 @@ const MOCK_MOOD = {
   ]
 }
 
+const MOCK_PRODUCTS = [
+  {
+    id: "ss_1",
+    name: "Oversized Linen Blazer",
+    brand: "Vince",
+    price: 89.99,
+    original_price: 145.00,
+    on_sale: true,
+    image_url: "https://placehold.co/400x400/f5f5dc/333?text=Blazer",
+    product_url: "https://example.com/product1",
+    retailer: "Nordstrom"
+  },
+  {
+    id: "ss_2",
+    name: "Ribbed Cotton Tank",
+    brand: "Everlane",
+    price: 28.00,
+    original_price: 28.00,
+    on_sale: false,
+    image_url: "https://placehold.co/400x400/ffffff/333?text=Tank",
+    product_url: "https://example.com/product2",
+    retailer: "Everlane"
+  },
+  {
+    id: "ss_3",
+    name: "Wide Leg Trousers",
+    brand: "COS",
+    price: 115.00,
+    original_price: 115.00,
+    on_sale: false,
+    image_url: "https://placehold.co/400x400/c19a6b/fff?text=Trousers",
+    product_url: "https://example.com/product3",
+    retailer: "COS"
+  },
+  {
+    id: "ss_4",
+    name: "Gold Hoop Earrings",
+    brand: "Mejuri",
+    price: 48.00,
+    original_price: 65.00,
+    on_sale: true,
+    image_url: "https://placehold.co/400x400/ffd700/333?text=Hoops",
+    product_url: "https://example.com/product4",
+    retailer: "Mejuri"
+  },
+]
+
 function App() {
   const [images, setImages] = useState([])
   const [prompt, setPrompt] = useState('')
@@ -36,7 +84,7 @@ function App() {
     // Simulate API call with mock data
     setTimeout(() => {
       setLoading(false)
-      setResults({ mood: MOCK_MOOD, products: [] })
+      setResults({ mood: MOCK_MOOD, products: MOCK_PRODUCTS })
     }, 2000)
   }
 
@@ -56,12 +104,11 @@ function App() {
           <main className="mt-8 space-y-6">
             <MoodSummary mood={results.mood} />
 
-            {/* Products will go here in next step */}
-            <p className="text-center text-gray-400">Products coming next...</p>
+            <ProductGrid products={results.products} />
 
             <button
               onClick={handleStartOver}
-              className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 
+              className="w-full py-3 rounded-xl border border-gray-200 text-gray-600
                          hover:bg-gray-50 transition-colors"
             >
               Start Over
