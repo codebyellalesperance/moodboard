@@ -1,67 +1,113 @@
-"""Tests for request validation."""
-
 import pytest
-from utils.validation import validate_moodcheck_request, validate_image
+import sys
+import os
 
-# Small valid base64 PNG (1x1 transparent pixel)
-VALID_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+# Add parent directory to path so we can import our modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from utils.validation import validate_moodcheck_request, validate_image, extract_image_data
+
+# A tiny valid PNG image in base64 (1x1 transparent pixel)
+VALID_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 class TestValidateMoodcheckRequest:
-    """Tests for validate_moodcheck_request function."""
 
-    def test_valid_request(self):
-        """Valid request should return None."""
-        data = {'images': [VALID_PNG], 'prompt': 'casual summer'}
-        assert validate_moodcheck_request(data) is None
+    def test_valid_request_single_image(self):
+        data = {"images": [VALID_IMAGE], "prompt": ""}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is True
+        assert errors == []
 
-    def test_valid_request_no_prompt(self):
-        """Request without prompt should be valid."""
-        data = {'images': [VALID_PNG]}
-        assert validate_moodcheck_request(data) is None
+    def test_valid_request_multiple_images(self):
+        data = {"images": [VALID_IMAGE, VALID_IMAGE, VALID_IMAGE], "prompt": "casual summer vibe"}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is True
+        assert errors == []
 
-    def test_empty_body(self):
-        """Empty body should return error."""
-        errors = validate_moodcheck_request({})
-        assert errors is not None
-        assert any('image' in e.lower() for e in errors)
+    def test_valid_request_max_images(self):
+        data = {"images": [VALID_IMAGE] * 5, "prompt": ""}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is True
+        assert errors == []
 
-    def test_no_images(self):
-        """Missing images should return error."""
-        errors = validate_moodcheck_request({'prompt': 'test'})
-        assert errors is not None
-        assert any('image' in e.lower() for e in errors)
+    def test_missing_images_field(self):
+        data = {"prompt": "test"}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is False
+        assert "'images' field is required" in errors
+
+    def test_empty_images_array(self):
+        data = {"images": []}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is False
+        assert "At least one image is required" in errors
 
     def test_too_many_images(self):
-        """More than 5 images should return error."""
-        data = {'images': [VALID_PNG] * 6}
-        errors = validate_moodcheck_request(data)
-        assert errors is not None
-        assert any('5' in e for e in errors)
+        data = {"images": [VALID_IMAGE] * 6}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is False
+        assert "Maximum 5 images allowed" in errors
 
     def test_prompt_too_long(self):
-        """Prompt over 200 chars should return error."""
-        data = {'images': [VALID_PNG], 'prompt': 'x' * 201}
-        errors = validate_moodcheck_request(data)
-        assert errors is not None
-        assert any('200' in e for e in errors)
+        data = {"images": [VALID_IMAGE], "prompt": "x" * 201}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is False
+        assert "Prompt must be 200 characters or less" in errors
+
+    def test_prompt_at_limit(self):
+        data = {"images": [VALID_IMAGE], "prompt": "x" * 200}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is True
+
+    def test_empty_body(self):
+        is_valid, errors = validate_moodcheck_request(None)
+        assert is_valid is False
+        assert "Request body is required" in errors
+
+    def test_images_not_array(self):
+        data = {"images": "not an array"}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is False
+        assert "'images' must be an array" in errors
 
 
 class TestValidateImage:
-    """Tests for validate_image function."""
 
     def test_valid_png(self):
-        """Valid PNG should return no errors."""
-        errors = validate_image(VALID_PNG, 0)
+        errors = validate_image(VALID_IMAGE, 1)
         assert errors == []
 
-    def test_invalid_format(self):
-        """Non-data-URI should return error."""
-        errors = validate_image('not a data uri', 0)
-        assert len(errors) > 0
+    def test_valid_jpeg(self):
+        jpeg_image = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
+        errors = validate_image(jpeg_image, 1)
+        assert errors == []
 
-    def test_unsupported_type(self):
-        """Unsupported MIME type should return error."""
-        gif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-        errors = validate_image(gif, 0)
-        assert any('unsupported' in e.lower() for e in errors)
+    def test_invalid_not_string(self):
+        errors = validate_image(12345, 1)
+        assert "Image 1 must be a string" in errors
+
+    def test_invalid_not_data_uri(self):
+        errors = validate_image("not a data uri", 1)
+        assert any("must be a valid data URI" in e for e in errors)
+
+    def test_invalid_format(self):
+        errors = validate_image("data:image/gif;base64,R0lGODlh", 1)
+        assert "Image 1 must be JPEG, PNG, or WEBP format" in errors
+
+    def test_invalid_base64(self):
+        errors = validate_image("data:image/png;base64,not-valid-base64!!!", 1)
+        assert "Image 1 has invalid base64 encoding" in errors
+
+
+class TestExtractImageData:
+
+    def test_extract_png(self):
+        media_type, data = extract_image_data(VALID_IMAGE)
+        assert media_type == "image/png"
+        assert data.startswith("iVBORw0KGgo")
+
+    def test_extract_jpeg(self):
+        jpeg = "data:image/jpeg;base64,/9j/4AAQ"
+        media_type, data = extract_image_data(jpeg)
+        assert media_type == "image/jpeg"
+        assert data == "/9j/4AAQ"

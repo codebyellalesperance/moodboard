@@ -1,1 +1,1 @@
-"""Test suite for moodboard backend."""
+# Empty file to make this a package

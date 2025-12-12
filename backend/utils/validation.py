@@ -1,84 +1,119 @@
-"""Request validation utilities."""
-
 import base64
 import re
-from config import Config
 
-# Supported image MIME types
-SUPPORTED_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
-
-# Data URI regex pattern
-DATA_URI_PATTERN = re.compile(r'^data:([^;]+);base64,(.+)$')
-
-
-def validate_moodcheck_request(data: dict) -> list[str] | None:
+def validate_moodcheck_request(data):
     """
-    Validate the moodcheck request body.
+    Validate the moodcheck request data.
 
     Args:
-        data: Request JSON body
+        data: Request JSON data
 
     Returns:
-        List of error messages, or None if valid
+        tuple: (is_valid: bool, errors: list)
     """
     errors = []
 
-    if not data:
-        return ['Request body is required']
+    # Check data exists
+    if data is None:
+        return False, ["Request body is required"]
 
-    # Validate images
-    images = data.get('images')
+    # Check images exist
+    if 'images' not in data:
+        errors.append("'images' field is required")
+        return False, errors
 
-    if not images:
-        errors.append('At least one image is required')
-    elif not isinstance(images, list):
-        errors.append('Images must be an array')
-    elif len(images) > Config.MAX_IMAGES:
-        errors.append(f'Maximum {Config.MAX_IMAGES} images allowed')
-    else:
-        for i, image in enumerate(images):
-            image_errors = validate_image(image, i)
-            errors.extend(image_errors)
+    images = data.get('images', [])
 
-    # Validate prompt
-    prompt = data.get('prompt')
-    if prompt is not None:
-        if not isinstance(prompt, str):
-            errors.append('Prompt must be a string')
-        elif len(prompt) > Config.MAX_PROMPT_LENGTH:
-            errors.append(f'Prompt must be {Config.MAX_PROMPT_LENGTH} characters or less')
+    # Check images is a list
+    if not isinstance(images, list):
+        errors.append("'images' must be an array")
+        return False, errors
 
-    return errors if errors else None
+    # Check image count
+    if len(images) == 0:
+        errors.append("At least one image is required")
+
+    if len(images) > 5:
+        errors.append("Maximum 5 images allowed")
+
+    # Validate each image
+    for i, img in enumerate(images):
+        img_errors = validate_image(img, i + 1)
+        errors.extend(img_errors)
+
+    # Validate prompt if provided
+    prompt = data.get('prompt', '')
+    if prompt and len(prompt) > 200:
+        errors.append("Prompt must be 200 characters or less")
+
+    return len(errors) == 0, errors
 
 
-def validate_image(image: str, index: int) -> list[str]:
-    """Validate a single image data URI."""
+def validate_image(image_data, index):
+    """
+    Validate a single base64 image.
+
+    Args:
+        image_data: Base64 encoded image string
+        index: Image number (for error messages)
+
+    Returns:
+        list: List of error messages (empty if valid)
+    """
     errors = []
-    prefix = f'Image {index + 1}'
 
-    if not isinstance(image, str):
-        errors.append(f'{prefix}: must be a string')
+    # Check it's a string
+    if not isinstance(image_data, str):
+        errors.append(f"Image {index} must be a string")
         return errors
 
-    # Parse data URI
-    match = DATA_URI_PATTERN.match(image)
-    if not match:
-        errors.append(f'{prefix}: must be a valid base64 data URI')
+    # Check data URI format
+    if not image_data.startswith('data:image/'):
+        errors.append(f"Image {index} must be a valid data URI (data:image/...)")
         return errors
 
-    mime_type, base64_data = match.groups()
+    # Check supported formats
+    valid_formats = ['data:image/jpeg', 'data:image/png', 'data:image/webp', 'data:image/jpg']
+    if not any(image_data.startswith(fmt) for fmt in valid_formats):
+        errors.append(f"Image {index} must be JPEG, PNG, or WEBP format")
+        return errors
 
-    # Check MIME type
-    if mime_type not in SUPPORTED_TYPES:
-        errors.append(f'{prefix}: unsupported type {mime_type}. Use JPEG, PNG, or WEBP')
-
-    # Check size
+    # Extract base64 data
     try:
-        decoded = base64.b64decode(base64_data)
-        size_mb = len(decoded) / (1024 * 1024)
-        if size_mb > Config.MAX_IMAGE_SIZE_MB:
-            errors.append(f'{prefix}: exceeds {Config.MAX_IMAGE_SIZE_MB}MB limit')
-    except Exception:
-        errors.append(f'{prefix}: invalid base64 encoding')
+        # Format is: data:image/jpeg;base64,/9j/4AAQ...
+        if ';base64,' not in image_data:
+            errors.append(f"Image {index} must be base64 encoded")
+            return errors
+
+        base64_data = image_data.split(';base64,')[1]
+
+        # Check size (base64 is ~33% larger than binary)
+        estimated_size = len(base64_data) * 0.75
+        max_size = 5 * 1024 * 1024  # 5MB
+
+        if estimated_size > max_size:
+            errors.append(f"Image {index} exceeds 5MB limit")
+
+        # Verify it's valid base64
+        base64.b64decode(base64_data)
+
+    except Exception as e:
+        errors.append(f"Image {index} has invalid base64 encoding")
 
     return errors
+
+
+def extract_image_data(image_uri):
+    """
+    Extract media type and base64 data from a data URI.
+
+    Args:
+        image_uri: Full data URI string
+
+    Returns:
+        tuple: (media_type, base64_data)
+    """
+    # data:image/jpeg;base64,/9j/4AAQ...
+    header, base64_data = image_uri.split(';base64,')
+    media_type = header.replace('data:', '')
+    return media_type, base64_data
