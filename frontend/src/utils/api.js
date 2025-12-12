@@ -16,7 +16,7 @@ export async function getMoodcheck(images, prompt) {
     )
 
     // API URL - update this to your backend URL
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
     const response = await fetch(`${API_URL}/api/moodcheck`, {
         method: 'POST',
