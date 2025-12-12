@@ -1,5 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import Config
 from utils.validation import validate_moodcheck_request
 from utils.logger import logger
@@ -13,6 +15,14 @@ Config.validate()
 app = Flask(__name__)
 CORS(app)
 
+# Rate limiting
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["100 per day", "20 per hour"],
+    storage_uri="memory://"
+)
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -24,6 +34,7 @@ def health_check():
 
 
 @app.route('/api/moodcheck', methods=['POST'])
+@limiter.limit("10 per minute")
 def moodcheck():
     """
     Main endpoint: Analyze images and return mood + products.
