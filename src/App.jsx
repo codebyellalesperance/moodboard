@@ -46,28 +46,30 @@ function App() {
   if (results) {
     return (
       <div className="min-h-screen pb-20">
-        <div className="max-w-4xl mx-auto px-6">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
           <Header />
 
-          <main className="mt-8 space-y-12">
+          <main className="mt-8 space-y-16">
             <MoodSummary mood={results.mood} />
 
-            <div className="space-y-6">
+            <div className="space-y-8">
               <h3 className="text-xs font-medium tracking-[0.2em] text-white/40 uppercase text-center">
                 Curated For You
               </h3>
               <ProductGrid products={results.products} />
             </div>
 
-            <button
-              onClick={handleStartOver}
-              className="w-full py-4 rounded-xl border border-white/10 text-white/40 
-                         hover:bg-white/5 hover:text-white transition-all 
-                         font-light tracking-widest uppercase text-xs flex items-center justify-center gap-2"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Start Over
-            </button>
+            <div className="max-w-md mx-auto">
+              <button
+                onClick={handleStartOver}
+                className="w-full py-4 rounded-xl border border-white/10 text-white/40 
+                           hover:bg-white/5 hover:text-white transition-all 
+                           font-light tracking-widest uppercase text-xs flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Start Over
+              </button>
+            </div>
           </main>
         </div>
       </div>
@@ -76,28 +78,31 @@ function App() {
 
   // Upload view
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-20 flex flex-col">
       {loading && <LoadingOverlay />}
 
-      <div className="max-w-xl mx-auto px-6">
+      <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-12 flex-1 flex flex-col">
         <Header />
 
-        <main className="mt-12 space-y-8">
+        <main className="mt-8 lg:mt-16 flex-1 flex flex-col justify-center max-w-3xl mx-auto w-full space-y-10">
           <ImageUploader images={images} setImages={setImages} />
-          <PromptInput prompt={prompt} setPrompt={setPrompt} />
 
-          {error && (
-            <ErrorMessage
-              message={error}
-              onRetry={() => setError(null)}
+          <div className="space-y-10">
+            <PromptInput prompt={prompt} setPrompt={setPrompt} />
+
+            {error && (
+              <ErrorMessage
+                message={error}
+                onRetry={() => setError(null)}
+              />
+            )}
+
+            <SubmitButton
+              disabled={images.length === 0}
+              onClick={handleSubmit}
+              loading={loading}
             />
-          )}
-
-          <SubmitButton
-            disabled={images.length === 0}
-            onClick={handleSubmit}
-            loading={loading}
-          />
+          </div>
         </main>
       </div>
     </div>
