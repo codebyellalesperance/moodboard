@@ -98,9 +98,13 @@ moodboard/
 │   │   ├── vision.py           # GPT-4V integration
 │   │   └── shopping.py         # ShopStyle API
 │   ├── utils/
-│   │   └── validation.py       # Request validation
+│   │   ├── validation.py       # Request validation
+│   │   └── logger.py           # Logging utility
 │   └── tests/
-│       └── test_validation.py
+│       ├── test_validation.py
+│       ├── test_vision.py
+│       ├── test_shopping.py
+│       └── test_integration.py
 │
 ├── docs/                       # Project documentation
 │   ├── BACKEND_PRD.md
@@ -130,7 +134,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python app.py    # Start dev server (http://localhost:5000)
+python app.py    # Start dev server (http://localhost:5001)
 
 # Tests
 pytest -v                        # Run all tests
@@ -144,7 +148,7 @@ pytest --cov=. --cov-report=html # With coverage
 
 ### Frontend (`frontend/.env`)
 ```
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5001
 ```
 
 ### Backend (`backend/.env`)
@@ -152,7 +156,7 @@ VITE_API_URL=http://localhost:5000
 OPENAI_API_KEY=sk-...
 SHOPSTYLE_PID=uid1234-...
 FLASK_ENV=development
-PORT=5000
+PORT=5001
 ```
 
 ---
@@ -248,7 +252,33 @@ Format: `<type>: <short present-tense summary>`
 - GPT-4V takes 5-15 seconds per request
 - ShopStyle `clickUrl` is the affiliate link (not `url`)
 - Backend strips markdown code blocks from GPT responses
+- Rate limiting: 10 req/min on moodcheck, 100/day default
+- Port 5001 locally (macOS uses 5000 for AirPlay)
 
 ### CORS
 - Backend has `flask-cors` enabled
 - Frontend `VITE_API_URL` must match backend URL
+
+---
+
+## Deployment
+
+### Backend (Render)
+1. Connect GitHub repo to Render
+2. Set environment variables in Render dashboard
+3. Deploy from `backend/` directory
+4. Uses Gunicorn via Procfile
+
+### Frontend (Vercel/Netlify)
+1. Connect GitHub repo
+2. Set `VITE_API_URL` to production backend URL
+3. Build command: `npm run build`
+4. Output directory: `dist`
+
+### Environment Variables (Production)
+```
+OPENAI_API_KEY=sk-...        # Real OpenAI key
+SHOPSTYLE_PID=uid...         # Real ShopStyle PID
+FLASK_ENV=production
+PORT=10000                   # Render assigns this
+```
