@@ -1,25 +1,24 @@
-"""Application configuration."""
-
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class Config:
-    """Flask configuration variables."""
-
-    # Flask
-    DEBUG = os.getenv('FLASK_ENV', 'development') == 'development'
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    SHOPSTYLE_PID = os.getenv('SHOPSTYLE_PID')
+    FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     PORT = int(os.getenv('PORT', 5000))
 
-    # OpenAI
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    @classmethod
+    def validate(cls):
+        """Check that all required config is present."""
+        missing = []
+        if not cls.OPENAI_API_KEY:
+            missing.append('OPENAI_API_KEY')
+        if not cls.SHOPSTYLE_PID:
+            missing.append('SHOPSTYLE_PID')
 
-    # ShopStyle
-    SHOPSTYLE_PID = os.getenv('SHOPSTYLE_PID')
+        if missing:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
 
-    # Limits
-    MAX_IMAGES = 5
-    MAX_IMAGE_SIZE_MB = 5
-    MAX_PROMPT_LENGTH = 200
+        return True
