@@ -8,6 +8,7 @@ import ProductGrid from './components/ProductGrid'
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorMessage from './components/ErrorMessage'
 import { getMoodcheck } from './utils/api'
+import { ArrowLeft } from 'lucide-react'
 
 function App() {
   const [images, setImages] = useState([])
@@ -28,7 +29,7 @@ function App() {
       })
     } catch (err) {
       console.error('API Error:', err)
-      setError(err.message || 'Something went wrong. Please try again.')
+      setError(err.message || 'Analysis failed')
     } finally {
       setLoading(false)
     }
@@ -44,26 +45,28 @@ function App() {
   // Results view
   if (results) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
-        <div className="max-w-4xl mx-auto px-4">
+      <div className="min-h-screen pb-20">
+        <div className="max-w-4xl mx-auto px-6">
           <Header />
 
-          <main className="mt-8 space-y-8">
+          <main className="mt-8 space-y-12">
             <MoodSummary mood={results.mood} />
 
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Shop the look
+            <div className="space-y-6">
+              <h3 className="text-xs font-medium tracking-[0.2em] text-white/40 uppercase text-center">
+                Curated For You
               </h3>
               <ProductGrid products={results.products} />
             </div>
 
             <button
               onClick={handleStartOver}
-              className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 
-                         hover:bg-gray-50 transition-colors font-medium"
+              className="w-full py-4 rounded-xl border border-white/10 text-white/40 
+                         hover:bg-white/5 hover:text-white transition-all 
+                         font-light tracking-widest uppercase text-xs flex items-center justify-center gap-2"
             >
-              ← Start Over
+              <ArrowLeft className="w-3 h-3" />
+              Start Over
             </button>
           </main>
         </div>
@@ -73,13 +76,13 @@ function App() {
 
   // Upload view
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen pb-20">
       {loading && <LoadingOverlay />}
 
-      <div className="max-w-2xl mx-auto px-4">
+      <div className="max-w-xl mx-auto px-6">
         <Header />
 
-        <main className="mt-8 space-y-6">
+        <main className="mt-12 space-y-8">
           <ImageUploader images={images} setImages={setImages} />
           <PromptInput prompt={prompt} setPrompt={setPrompt} />
 
@@ -95,11 +98,6 @@ function App() {
             onClick={handleSubmit}
             loading={loading}
           />
-
-          {/* Helper text */}
-          <p className="text-center text-gray-400 text-sm">
-            Upload screenshots, Pinterest images, or outfit inspo to find similar products
-          </p>
         </main>
       </div>
     </div>

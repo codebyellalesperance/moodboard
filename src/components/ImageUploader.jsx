@@ -1,121 +1,82 @@
-import { useState, useRef } from 'react'
+import { useRef } from 'react'
+import { Upload, X, Image as ImageIcon } from 'lucide-react'
 
 function ImageUploader({ images, setImages }) {
     const fileInputRef = useRef(null)
-    const [isDragging, setIsDragging] = useState(false)
 
-    const handleFiles = (files) => {
-        const validFiles = Array.from(files).filter(file => {
-            // Check if image
-            if (!file.type.startsWith('image/')) {
-                alert(`${file.name} is not an image`)
-                return false
-            }
-            // Check size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                alert(`${file.name} is too large (max 5MB)`)
-                return false
-            }
-            return true
-        })
-
-        // Check total count
-        const totalImages = images.length + validFiles.length
-        if (totalImages > 5) {
-            alert('Maximum 5 images allowed')
-            const allowedCount = 5 - images.length
-            validFiles.splice(allowedCount)
-        }
-
-        if (validFiles.length > 0) {
-            setImages([...images, ...validFiles])
-        }
-    }
-
-    const handleClick = () => {
-        fileInputRef.current?.click()
-    }
-
-    const handleFileChange = (e) => {
-        if (e.target.files) {
-            handleFiles(e.target.files)
-        }
-        // Reset input so same file can be selected again
-        e.target.value = ''
-    }
-
-    const handleDragOver = (e) => {
-        e.preventDefault()
-        setIsDragging(true)
-    }
-
-    const handleDragLeave = (e) => {
-        e.preventDefault()
-        setIsDragging(false)
+    const handleFileSelect = (e) => {
+        const files = Array.from(e.target.files)
+        processFiles(files)
     }
 
     const handleDrop = (e) => {
         e.preventDefault()
-        setIsDragging(false)
-        if (e.dataTransfer.files) {
-            handleFiles(e.dataTransfer.files)
+        const files = Array.from(e.dataTransfer.files)
+        processFiles(files)
+    }
+
+    const processFiles = (files) => {
+        const validFiles = files.filter(file =>
+            file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
+        )
+
+        if (images.length + validFiles.length > 5) {
+            alert('Max 5 images allowed')
+            return
         }
+
+        setImages(prev => [...prev, ...validFiles])
     }
 
     const removeImage = (index) => {
-        setImages(images.filter((_, i) => i !== index))
+        setImages(prev => prev.filter((_, i) => i !== index))
     }
 
     return (
-        <div className="w-full">
-            {/* Hidden file input */}
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="hidden"
-            />
-
-            {/* Upload zone */}
+        <div className="space-y-4">
             <div
-                onClick={handleClick}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors cursor-pointer bg-white
-          ${isDragging ? 'border-gray-900 bg-gray-50' : 'border-gray-300 hover:border-gray-400'}`}
+                className="glass glass-hover rounded-2xl p-12 text-center cursor-pointer 
+                   transition-all duration-300 group min-h-[200px] flex flex-col 
+                   items-center justify-center border-dashed border-white/20 hover:border-white/40"
             >
-                <div className="text-4xl mb-4">📷</div>
-                <p className="text-gray-600 font-medium">
-                    Drag & drop images or click to upload
-                </p>
-                <p className="text-gray-400 text-sm mt-2">
-                    {images.length}/5 images • JPG, PNG, or WEBP
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                />
+
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center 
+                        group-hover:bg-white/10 transition-colors mb-4">
+                    <Upload className="w-5 h-5 text-white/60" />
+                </div>
+
+                <p className="text-sm font-light tracking-widest text-white/80 uppercase">
+                    Drop Images
                 </p>
             </div>
 
-            {/* Image previews */}
             {images.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-3">
+                <div className="grid grid-cols-5 gap-3">
                     {images.map((file, index) => (
-                        <div key={index} className="relative group">
+                        <div key={index} className="relative aspect-square group">
                             <img
                                 src={URL.createObjectURL(file)}
                                 alt={`Upload ${index + 1}`}
-                                className="w-20 h-20 object-cover rounded-lg"
+                                className="w-full h-full object-cover rounded-lg border border-white/10"
                             />
                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    removeImage(index)
-                                }}
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-gray-900 text-white rounded-full 
-                           text-sm flex items-center justify-center opacity-0 group-hover:opacity-100 
-                           transition-opacity"
+                                onClick={() => removeImage(index)}
+                                className="absolute -top-2 -right-2 p-1 bg-black/80 text-white/60 
+                           hover:text-white rounded-full opacity-0 group-hover:opacity-100 
+                           transition-opacity border border-white/10"
                             >
-                                ×
+                                <X className="w-3 h-3" />
                             </button>
                         </div>
                     ))}

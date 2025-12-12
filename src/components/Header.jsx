@@ -1,8 +1,9 @@
 function Header() {
     return (
         <header className="py-8 text-center">
-            <h1 className="text-3xl font-semibold text-gray-900">Moodboard</h1>
-            <p className="mt-2 text-gray-500">Turn inspo into a shopping cart</p>
+            <h1 className="text-2xl font-light tracking-[0.2em] text-white/90 uppercase">
+                Moodboard
+            </h1>
         </header>
     )
 }

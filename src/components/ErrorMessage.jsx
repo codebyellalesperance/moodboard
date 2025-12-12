@@ -1,14 +1,21 @@
+import { AlertCircle, RefreshCw } from 'lucide-react'
+
 function ErrorMessage({ message, onRetry }) {
     return (
-        <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-center">
-            <p className="text-red-600">{message}</p>
+        <div className="p-6 glass rounded-xl text-center space-y-3 border-red-500/20 bg-red-500/5">
+            <div className="flex justify-center">
+                <AlertCircle className="w-6 h-6 text-red-400" />
+            </div>
+            <p className="text-red-200/80 text-sm font-light">{message}</p>
             {onRetry && (
                 <button
                     onClick={onRetry}
-                    className="mt-3 px-4 py-2 bg-red-100 hover:bg-red-200 
-                     rounded-lg text-red-700 text-sm transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg 
+                     bg-red-500/10 hover:bg-red-500/20 text-red-300 text-xs 
+                     tracking-wide uppercase transition-colors"
                 >
-                    Try Again
+                    <RefreshCw className="w-3 h-3" />
+                    Retry
                 </button>
             )}
         </div>

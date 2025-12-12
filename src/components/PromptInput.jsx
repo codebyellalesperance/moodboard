@@ -1,50 +1,20 @@
 function PromptInput({ prompt, setPrompt }) {
-    const maxLength = 200
-
-    const examplePrompts = [
-        "But affordable",
-        "For summer",
-        "Work appropriate",
-        "Date night",
-        "Casual version"
-    ]
-
-    const addToPrompt = (text) => {
-        const newPrompt = prompt ? `${prompt} ${text}`.trim() : text
-        if (newPrompt.length <= maxLength) {
-            setPrompt(newPrompt)
-        }
-    }
-
     return (
-        <div className="w-full">
+        <div className="space-y-3">
             <div className="relative">
                 <input
                     type="text"
                     value={prompt}
-                    onChange={(e) => setPrompt(e.target.value.slice(0, maxLength))}
-                    placeholder="Describe what you want (optional) — e.g., 'This but affordable'"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white
-                     focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent
-                     text-gray-900 placeholder-gray-400"
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="DESCRIBE YOUR VIBE..."
+                    maxLength={200}
+                    className="w-full glass rounded-xl px-4 py-4 text-white placeholder-white/30 
+                     focus:outline-none focus:border-white/30 transition-colors 
+                     text-sm tracking-wide font-light"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                    {prompt.length}/{maxLength}
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-white/30">
+                    {prompt.length}/200
                 </span>
-            </div>
-
-            {/* Example prompt chips */}
-            <div className="mt-3 flex flex-wrap gap-2">
-                {examplePrompts.map((example) => (
-                    <button
-                        key={example}
-                        onClick={() => addToPrompt(example)}
-                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 
-                       rounded-full text-gray-600 transition-colors"
-                    >
-                        {example}
-                    </button>
-                ))}
             </div>
         </div>
     )
