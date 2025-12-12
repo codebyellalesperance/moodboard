@@ -1,77 +1,192 @@
-"""ShopStyle Collective API integration for product search."""
-
 import requests
+from typing import List, Dict, Optional
 from config import Config
 
-SHOPSTYLE_API_URL = 'https://api.shopstyle.com/api/v2/products'
+SHOPSTYLE_BASE_URL = "https://api.shopstyle.com/api/v2"
 
 
-def search_products(mood_result: dict, limit_per_query: int = 4) -> list[dict]:
+def search_products(
+    query: str,
+    num_results: int = 10,
+    min_price: Optional[int] = None,
+    max_price: Optional[int] = None
+) -> List[Dict]:
     """
-    Search ShopStyle for products matching the mood profile.
+    Search ShopStyle Collective API for products.
 
     Args:
-        mood_result: Mood profile from vision service
-        limit_per_query: Max products per search query
+        query: Search query string
+        num_results: Number of results to return (max 50)
+        min_price: Minimum price filter
+        max_price: Maximum price filter
 
     Returns:
-        List of product dicts with id, name, brand, price, image_url, product_url, etc.
+        List of product dicts with affiliate links
     """
-    search_queries = mood_result.get('search_queries', [])
+
+    url = f"{SHOPSTYLE_BASE_URL}/products"
+
+    params = {
+        "pid": Config.SHOPSTYLE_PID,
+        "fts": query,
+        "offset": 0,
+        "limit": min(num_results, 50),
+        "sort": "Popular"
+    }
+
+    # Add price filters
+    if min_price is not None or max_price is not None:
+        min_p = min_price or 0
+        max_p = max_price or 10000
+        params["fl"] = f"p:{min_p}:{max_p}"
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"ShopStyle API error: {e}")
+        return []
+
+    products = []
+
+    for item in data.get("products", []):
+        product = format_product(item, query)
+        if product:
+            products.append(product)
+
+    return products
+
+
+def format_product(item: dict, query: str) -> Optional[Dict]:
+    """
+    Format a ShopStyle product into our standard format.
+
+    Args:
+        item: Raw product data from ShopStyle
+        query: The search query that found this product
+
+    Returns:
+        Formatted product dict or None if invalid
+    """
+
+    try:
+        # Get the best available image
+        image_url = ""
+        image_sizes = item.get("image", {}).get("sizes", {})
+        for size in ["Large", "Medium", "Small", "Original"]:
+            if size in image_sizes:
+                image_url = image_sizes[size].get("url", "")
+                break
+
+        # Get prices
+        price = item.get("salePrice") or item.get("price") or 0
+        original_price = item.get("price") or price
+
+        return {
+            "id": f"ss_{item.get('id', '')}",
+            "name": item.get("name", "Unknown Product"),
+            "brand": item.get("brand", {}).get("name", ""),
+            "price": round(float(price), 2),
+            "original_price": round(float(original_price), 2),
+            "on_sale": float(price) < float(original_price),
+            "currency": "USD",
+            "image_url": image_url,
+            "product_url": item.get("clickUrl", ""),  # Affiliate link!
+            "retailer": item.get("retailer", {}).get("name", ""),
+            "category": item.get("categories", [{}])[0].get("name", "") if item.get("categories") else "",
+            "match_reason": query,
+            "in_stock": item.get("inStock", True)
+        }
+    except Exception as e:
+        print(f"Error formatting product: {e}")
+        return None
+
+
+def search_all_queries(
+    search_queries: List[str],
+    max_products: int = 20,
+    budget: Optional[str] = None
+) -> List[Dict]:
+    """
+    Search multiple queries and combine/dedupe results.
+
+    Args:
+        search_queries: List of search query strings
+        max_products: Maximum total products to return
+        budget: Optional budget hint ("affordable", "mid-range", "luxury")
+
+    Returns:
+        Deduped list of products
+    """
+
     all_products = []
     seen_ids = set()
 
-    for query in search_queries:
+    # Set price filters based on budget
+    min_price, max_price = None, None
+    if budget == "affordable":
+        max_price = 75
+    elif budget == "mid-range":
+        min_price = 50
+        max_price = 200
+    elif budget == "luxury":
+        min_price = 150
+
+    # Use up to 8 queries
+    queries_to_use = search_queries[:8]
+    products_per_query = max(3, max_products // len(queries_to_use)) if queries_to_use else 0
+
+    for query in queries_to_use:
         try:
-            response = requests.get(
-                SHOPSTYLE_API_URL,
-                params={
-                    'pid': Config.SHOPSTYLE_PID,
-                    'fts': query,
-                    'limit': limit_per_query,
-                    'sort': 'Popular'
-                },
-                timeout=10
+            products = search_products(
+                query=query,
+                num_results=products_per_query,
+                min_price=min_price,
+                max_price=max_price
             )
-            response.raise_for_status()
-            data = response.json()
 
-            for product in data.get('products', []):
-                product_id = str(product.get('id'))
+            for product in products:
+                # Dedupe by product ID
+                if product["id"] not in seen_ids:
+                    seen_ids.add(product["id"])
+                    all_products.append(product)
 
-                # Skip duplicates
-                if product_id in seen_ids:
-                    continue
-                seen_ids.add(product_id)
-
-                all_products.append(format_product(product, query))
-
-        except requests.RequestException as e:
-            # Log but continue with other queries
-            print(f'ShopStyle error for query "{query}": {e}')
+        except Exception as e:
+            print(f"Error searching '{query}': {e}")
             continue
 
-    return all_products
+    # Sort: in-stock first, then sale items, then by price
+    all_products.sort(key=lambda x: (
+        not x.get("in_stock", True),
+        not x.get("on_sale", False),
+        x.get("price", 0)
+    ))
+
+    return all_products[:max_products]
 
 
-def format_product(product: dict, match_reason: str) -> dict:
-    """Format a ShopStyle product for the API response."""
-    price_info = product.get('priceLabel', '')
-    sale_price = product.get('salePrice')
-    original_price = product.get('price')
+def detect_budget_from_prompt(prompt: str) -> Optional[str]:
+    """
+    Detect budget hints from user prompt.
 
-    return {
-        'id': f"ss_{product.get('id')}",
-        'name': product.get('name', ''),
-        'brand': product.get('brand', {}).get('name', ''),
-        'price': sale_price or original_price,
-        'original_price': original_price if sale_price else None,
-        'on_sale': sale_price is not None and sale_price < original_price,
-        'currency': 'USD',
-        'image_url': product.get('image', {}).get('sizes', {}).get('Large', {}).get('url', ''),
-        'product_url': product.get('clickUrl', ''),  # Affiliate link
-        'retailer': product.get('retailer', {}).get('name', ''),
-        'category': product.get('categories', [{}])[0].get('name', '') if product.get('categories') else '',
-        'match_reason': match_reason,
-        'in_stock': product.get('inStock', True)
-    }
+    Args:
+        prompt: User's prompt string
+
+    Returns:
+        Budget category or None
+    """
+    prompt_lower = prompt.lower()
+
+    affordable_keywords = ['affordable', 'cheap', 'budget', 'under $50', 'under $75', 'under $100', 'inexpensive', 'low cost']
+    luxury_keywords = ['luxury', 'designer', 'high-end', 'expensive', 'premium', 'splurge']
+
+    for keyword in affordable_keywords:
+        if keyword in prompt_lower:
+            return "affordable"
+
+    for keyword in luxury_keywords:
+        if keyword in prompt_lower:
+            return "luxury"
+
+    return None
