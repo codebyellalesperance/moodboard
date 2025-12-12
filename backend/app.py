@@ -2,8 +2,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
 from utils.validation import validate_moodcheck_request
+from utils.logger import logger
 from services.vision import extract_mood
 from services.shopping import search_all_queries, detect_budget_from_prompt
+import time
 
 # Validate config on startup
 Config.validate()
@@ -36,13 +38,20 @@ def moodcheck():
         - products: array of product objects
         - search_queries_used: array of queries used
     """
+    start_time = time.time()
 
     # Get request data
     data = request.get_json()
 
+    # Log request
+    image_count = len(data.get('images', [])) if data else 0
+    prompt_preview = data.get('prompt', '')[:50] if data else ''
+    logger.info(f"Moodcheck request: {image_count} images, prompt: '{prompt_preview}...'")
+
     # Step 1: Validate request
     is_valid, errors = validate_moodcheck_request(data)
     if not is_valid:
+        logger.warning(f"Validation failed: {errors}")
         return jsonify({
             'success': False,
             'error': 'Invalid request',
@@ -54,9 +63,13 @@ def moodcheck():
 
     # Step 2: Extract mood from images
     try:
+        logger.info("Calling Vision API...")
+        vision_start = time.time()
         mood_profile = extract_mood(images, prompt)
+        vision_time = time.time() - vision_start
+        logger.info(f"Vision API completed in {vision_time:.2f}s - Mood: {mood_profile.get('name')}")
     except Exception as e:
-        print(f"Vision API error: {e}")
+        logger.error(f"Vision API error: {e}")
         return jsonify({
             'success': False,
             'error': 'Unable to analyze images. Please try again.'
@@ -64,12 +77,15 @@ def moodcheck():
 
     # Step 3: Search for products
     try:
+        logger.info("Searching ShopStyle...")
+        shopping_start = time.time()
         search_queries = mood_profile.get('search_queries', [])
         budget = detect_budget_from_prompt(prompt)
         products = search_all_queries(search_queries, max_products=20, budget=budget)
+        shopping_time = time.time() - shopping_start
+        logger.info(f"ShopStyle completed in {shopping_time:.2f}s - Found {len(products)} products")
     except Exception as e:
-        print(f"Shopping API error: {e}")
-        # Return mood even if product search fails
+        logger.error(f"Shopping API error: {e}")
         products = []
 
     # Step 4: Build response
@@ -87,11 +103,15 @@ def moodcheck():
         'search_queries_used': search_queries[:8]
     }
 
+    total_time = time.time() - start_time
+    logger.info(f"Moodcheck completed in {total_time:.2f}s")
+
     return jsonify(response), 200
 
 
 @app.errorhandler(500)
 def internal_error(error):
+    logger.error(f"Internal server error: {error}")
     return jsonify({
         'success': False,
         'error': 'Internal server error'
@@ -107,6 +127,7 @@ def not_found(error):
 
 
 if __name__ == '__main__':
+    logger.info(f"Starting Moodboard API on port {Config.PORT}")
     app.run(
         host='0.0.0.0',
         port=Config.PORT,
