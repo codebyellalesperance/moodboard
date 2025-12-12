@@ -1,15 +1,15 @@
 import Header from './components/Header'
+import ImageUploader from './components/ImageUploader'
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       <div className="max-w-2xl mx-auto px-4">
         <Header />
 
-        {/* Content will go here in next steps */}
-        <div className="mt-8 text-center text-gray-400">
-          Upload area coming next...
-        </div>
+        <main className="mt-8">
+          <ImageUploader />
+        </main>
       </div>
     </div>
   )
