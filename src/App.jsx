@@ -5,6 +5,8 @@ import PromptInput from './components/PromptInput'
 import SubmitButton from './components/SubmitButton'
 import MoodSummary from './components/MoodSummary'
 import ProductGrid from './components/ProductGrid'
+import LoadingOverlay from './components/LoadingOverlay'
+import ErrorMessage from './components/ErrorMessage'
 import { getMoodcheck } from './utils/api'
 
 function App() {
@@ -39,23 +41,29 @@ function App() {
     setError(null)
   }
 
-  // Show results view if we have results
+  // Results view
   if (results) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
         <div className="max-w-4xl mx-auto px-4">
           <Header />
 
-          <main className="mt-8 space-y-6">
+          <main className="mt-8 space-y-8">
             <MoodSummary mood={results.mood} />
-            <ProductGrid products={results.products} />
+
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Shop the look
+              </h3>
+              <ProductGrid products={results.products} />
+            </div>
 
             <button
               onClick={handleStartOver}
               className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 
-                         hover:bg-gray-50 transition-colors"
+                         hover:bg-gray-50 transition-colors font-medium"
             >
-              Start Over
+              ← Start Over
             </button>
           </main>
         </div>
@@ -63,9 +71,11 @@ function App() {
     )
   }
 
-  // Show upload view
+  // Upload view
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      {loading && <LoadingOverlay />}
+
       <div className="max-w-2xl mx-auto px-4">
         <Header />
 
@@ -74,9 +84,10 @@ function App() {
           <PromptInput prompt={prompt} setPrompt={setPrompt} />
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-              {error}
-            </div>
+            <ErrorMessage
+              message={error}
+              onRetry={() => setError(null)}
+            />
           )}
 
           <SubmitButton
@@ -84,6 +95,11 @@ function App() {
             onClick={handleSubmit}
             loading={loading}
           />
+
+          {/* Helper text */}
+          <p className="text-center text-gray-400 text-sm">
+            Upload screenshots, Pinterest images, or outfit inspo to find similar products
+          </p>
         </main>
       </div>
     </div>
