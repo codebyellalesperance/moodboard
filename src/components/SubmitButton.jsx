@@ -6,7 +6,7 @@ function SubmitButton({ disabled, onClick, loading }) {
             onClick={onClick}
             disabled={disabled || loading}
             className={`
-        w-full py-4 rounded-xl font-light tracking-[0.2em] text-sm uppercase
+        w-full py-6 rounded-2xl font-light tracking-[0.2em] text-sm uppercase
         transition-all duration-500 relative overflow-hidden group
         ${disabled
                     ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'

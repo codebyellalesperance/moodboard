@@ -84,10 +84,10 @@ function App() {
       <div className="w-full max-w-[1200px] mx-auto px-6 lg:px-12 flex-1 flex flex-col">
         <Header />
 
-        <main className="mt-8 lg:mt-16 flex-1 flex flex-col justify-center max-w-3xl mx-auto w-full space-y-10">
+        <main className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full space-y-12 py-12">
           <ImageUploader images={images} setImages={setImages} />
 
-          <div className="space-y-10">
+          <div className="space-y-8">
             <PromptInput prompt={prompt} setPrompt={setPrompt} />
 
             {error && (

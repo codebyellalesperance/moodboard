@@ -33,13 +33,13 @@ function ImageUploader({ images, setImages }) {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             <div
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
-                className="glass glass-hover rounded-2xl p-12 text-center cursor-pointer 
-                   transition-all duration-300 group min-h-[200px] flex flex-col 
+                className="glass glass-hover rounded-3xl p-16 text-center cursor-pointer 
+                   transition-all duration-500 group min-h-[320px] flex flex-col 
                    items-center justify-center border-dashed border-white/20 hover:border-white/40"
             >
                 <input
@@ -51,12 +51,12 @@ function ImageUploader({ images, setImages }) {
                     multiple
                 />
 
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center 
-                        group-hover:bg-white/10 transition-colors mb-4">
-                    <Upload className="w-5 h-5 text-white/60" />
+                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center 
+                        group-hover:bg-white/10 transition-colors mb-6 backdrop-blur-md">
+                    <Upload className="w-6 h-6 text-white/60" />
                 </div>
 
-                <p className="text-sm font-light tracking-widest text-white/80 uppercase">
+                <p className="text-sm font-light tracking-[0.2em] text-white/80 uppercase">
                     Drop Images
                 </p>
             </div>
