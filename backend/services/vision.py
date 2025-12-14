@@ -5,13 +5,8 @@ from config import Config
 # Initialize OpenAI client
 client = openai.OpenAI(api_key=Config.OPENAI_API_KEY)
 
-MOOD_EXTRACTION_PROMPT = """
-Analyze these images together as a single mood board. The user wants to shop this vibe.
-
-User's request: {user_prompt}
-
-Your task: Extract the AESTHETIC ESSENCE — not what's literally in the image, but the FEELING and STYLE ENERGY someone would want to recreate through clothing and accessories.
-
+# JSON schema for mood profile (shared between prompts)
+MOOD_JSON_SCHEMA = """
 Return a JSON object with EXACTLY these fields (no additional text, just JSON):
 
 {{
@@ -59,14 +54,30 @@ Important rules:
 - Return ONLY the JSON object, no markdown code blocks, no explanation
 """
 
+MOOD_EXTRACTION_PROMPT_WITH_IMAGES = """
+Analyze these images together as a single mood board. The user wants to shop this vibe.
+
+User's request: {user_prompt}
+
+Your task: Extract the AESTHETIC ESSENCE — not what's literally in the image, but the FEELING and STYLE ENERGY someone would want to recreate through clothing and accessories.
+""" + MOOD_JSON_SCHEMA
+
+MOOD_EXTRACTION_PROMPT_TEXT_ONLY = """
+The user wants to shop a specific vibe/aesthetic. Based on their description, create a mood profile.
+
+User's vibe description: {user_prompt}
+
+Your task: Interpret their aesthetic vision and create a comprehensive style profile that captures the FEELING and STYLE ENERGY they want to achieve through clothing and accessories.
+""" + MOOD_JSON_SCHEMA
+
 
 def extract_mood(images: list, prompt: str = "") -> dict:
     """
-    Send images to GPT-4V and extract mood profile.
+    Extract mood profile from images and/or text prompt.
 
     Args:
-        images: List of base64 encoded images with data URI prefix
-        prompt: User's optional modifier prompt
+        images: List of base64 encoded images with data URI prefix (can be empty)
+        prompt: User's vibe description (can be empty if images provided)
 
     Returns:
         Parsed mood profile dict
@@ -74,32 +85,40 @@ def extract_mood(images: list, prompt: str = "") -> dict:
     Raises:
         Exception: If API call fails or response parsing fails
     """
+    has_images = images and len(images) > 0
 
-    # Build message content with images
+    # Build message content
     content = []
 
-    # Add each image
-    for img in images:
-        content.append({
-            "type": "image_url",
-            "image_url": {
-                "url": img,
-                "detail": "high"
-            }
-        })
+    # Add images if provided
+    if has_images:
+        for img in images:
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": img,
+                    "detail": "high"
+                }
+            })
 
-    # Add the text prompt
-    formatted_prompt = MOOD_EXTRACTION_PROMPT.format(
-        user_prompt=prompt if prompt else "No specific modifications requested"
-    )
+    # Choose prompt based on whether we have images
+    if has_images:
+        formatted_prompt = MOOD_EXTRACTION_PROMPT_WITH_IMAGES.format(
+            user_prompt=prompt if prompt else "No specific modifications requested"
+        )
+    else:
+        formatted_prompt = MOOD_EXTRACTION_PROMPT_TEXT_ONLY.format(
+            user_prompt=prompt
+        )
+
     content.append({
         "type": "text",
         "text": formatted_prompt
     })
 
-    # Call GPT-4V
+    # Call OpenAI - use gpt-4o for images, gpt-4o for text-only too (good at style)
     response = client.chat.completions.create(
-        model="gpt-4o",  # or "gpt-4-vision-preview"
+        model="gpt-4o",
         messages=[
             {
                 "role": "user",

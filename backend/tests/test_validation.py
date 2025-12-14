@@ -30,17 +30,32 @@ class TestValidateMoodcheckRequest:
         assert is_valid is True
         assert errors == []
 
-    def test_missing_images_field(self):
-        data = {"prompt": "test"}
+    def test_valid_request_text_only(self):
+        """Text-only requests (no images) should be valid."""
+        data = {"prompt": "coastal grandmother aesthetic"}
         is_valid, errors = validate_moodcheck_request(data)
-        assert is_valid is False
-        assert "'images' field is required" in errors
+        assert is_valid is True
+        assert errors == []
 
-    def test_empty_images_array(self):
-        data = {"images": []}
+    def test_valid_request_text_only_with_empty_images(self):
+        """Text-only with empty images array should be valid."""
+        data = {"images": [], "prompt": "dark academia vibes"}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is True
+        assert errors == []
+
+    def test_invalid_neither_images_nor_prompt(self):
+        """Must provide images OR prompt."""
+        data = {"images": [], "prompt": ""}
         is_valid, errors = validate_moodcheck_request(data)
         assert is_valid is False
-        assert "At least one image is required" in errors
+        assert "Please provide images and/or describe your vibe" in errors
+
+    def test_invalid_neither_images_nor_prompt_whitespace(self):
+        """Whitespace-only prompt should not count."""
+        data = {"images": [], "prompt": "   "}
+        is_valid, errors = validate_moodcheck_request(data)
+        assert is_valid is False
 
     def test_too_many_images(self):
         data = {"images": [VALID_IMAGE] * 6}
@@ -49,13 +64,13 @@ class TestValidateMoodcheckRequest:
         assert "Maximum 5 images allowed" in errors
 
     def test_prompt_too_long(self):
-        data = {"images": [VALID_IMAGE], "prompt": "x" * 201}
+        data = {"images": [VALID_IMAGE], "prompt": "x" * 501}
         is_valid, errors = validate_moodcheck_request(data)
         assert is_valid is False
-        assert "Prompt must be 200 characters or less" in errors
+        assert "Prompt must be 500 characters or less" in errors
 
     def test_prompt_at_limit(self):
-        data = {"images": [VALID_IMAGE], "prompt": "x" * 200}
+        data = {"images": [VALID_IMAGE], "prompt": "x" * 500}
         is_valid, errors = validate_moodcheck_request(data)
         assert is_valid is True
 

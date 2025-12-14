@@ -18,6 +18,9 @@ function AppContent() {
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
 
+  // Check if we have enough input to submit (images OR prompt)
+  const canSubmit = images.length > 0 || prompt.trim().length > 0
+
   const handleSubmit = async () => {
     setLoading(true)
     setError(null)
@@ -75,7 +78,7 @@ function AppContent() {
                 onClick={handleStartOver}
                 className="w-full py-5 rounded-2xl glass-card glass-hover
                            theme-text-secondary hover:theme-text-primary
-                           font-medium tracking-[0.15em] uppercase text-xs 
+                           font-medium tracking-[0.15em] uppercase text-xs
                            flex items-center justify-center gap-3"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -101,25 +104,37 @@ function AppContent() {
       <div className="w-full max-w-[900px] mx-auto px-8 lg:px-12 flex-1 flex flex-col relative z-10">
         <Header />
 
-        <main className="flex-1 flex flex-col justify-center py-16">
+        <main className="flex-1 flex flex-col justify-center py-12">
           {/* Hero section */}
-          <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-4xl md:text-5xl font-extralight tracking-tight theme-text-primary mb-5">
-              Discover Your Style
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-4xl md:text-5xl font-extralight tracking-tight theme-text-primary mb-4">
+              Shop Your Vibe
             </h2>
-            <p className="text-base theme-text-secondary font-light max-w-md mx-auto leading-relaxed">
-              Upload your inspiration images and let AI curate personalized fashion picks just for you
+            <p className="text-base theme-text-secondary font-light max-w-lg mx-auto leading-relaxed">
+              Upload inspiration images, describe your aesthetic, or both — and discover products that match your style
             </p>
           </div>
 
-          <div className="space-y-10">
-            <div className="animate-slide-up opacity-0" style={{ animationDelay: '0.15s', animationFillMode: 'forwards' }}>
+          <div className="space-y-8">
+            {/* Prompt Input - Now more prominent */}
+            <div className="animate-slide-up opacity-0" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
+              <PromptInput prompt={prompt} setPrompt={setPrompt} />
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 animate-fade-in opacity-0" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
+              <span className="text-xs theme-text-tertiary uppercase tracking-widest">and / or</span>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
+            </div>
+
+            {/* Image Uploader */}
+            <div className="animate-slide-up opacity-0" style={{ animationDelay: '0.25s', animationFillMode: 'forwards' }}>
               <ImageUploader images={images} setImages={setImages} />
             </div>
 
-            <div className="space-y-8 animate-slide-up opacity-0" style={{ animationDelay: '0.3s', animationFillMode: 'forwards' }}>
-              <PromptInput prompt={prompt} setPrompt={setPrompt} />
-
+            {/* Error and Submit */}
+            <div className="space-y-6 animate-slide-up opacity-0" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
               {error && (
                 <ErrorMessage
                   message={error}
@@ -128,10 +143,16 @@ function AppContent() {
               )}
 
               <SubmitButton
-                disabled={images.length === 0}
+                disabled={!canSubmit}
                 onClick={handleSubmit}
                 loading={loading}
               />
+
+              {!canSubmit && (
+                <p className="text-center text-xs theme-text-tertiary">
+                  Describe your vibe or upload at least one image to continue
+                </p>
+              )}
             </div>
           </div>
         </main>

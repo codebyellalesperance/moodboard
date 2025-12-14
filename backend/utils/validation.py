@@ -5,6 +5,8 @@ def validate_moodcheck_request(data):
     """
     Validate the moodcheck request data.
 
+    Requires at least one of: images OR prompt (or both).
+
     Args:
         data: Request JSON data
 
@@ -17,34 +19,34 @@ def validate_moodcheck_request(data):
     if data is None:
         return False, ["Request body is required"]
 
-    # Check images exist
-    if 'images' not in data:
-        errors.append("'images' field is required")
-        return False, errors
-
     images = data.get('images', [])
+    prompt = data.get('prompt', '')
 
-    # Check images is a list
-    if not isinstance(images, list):
+    # Check images is a list if provided
+    if images and not isinstance(images, list):
         errors.append("'images' must be an array")
         return False, errors
 
-    # Check image count
-    if len(images) == 0:
-        errors.append("At least one image is required")
+    # Require at least images OR prompt
+    has_images = isinstance(images, list) and len(images) > 0
+    has_prompt = isinstance(prompt, str) and len(prompt.strip()) > 0
 
-    if len(images) > 5:
-        errors.append("Maximum 5 images allowed")
+    if not has_images and not has_prompt:
+        errors.append("Please provide images and/or describe your vibe")
+        return False, errors
 
-    # Validate each image
-    for i, img in enumerate(images):
-        img_errors = validate_image(img, i + 1)
-        errors.extend(img_errors)
+    # Validate images if provided
+    if has_images:
+        if len(images) > 5:
+            errors.append("Maximum 5 images allowed")
 
-    # Validate prompt if provided
-    prompt = data.get('prompt', '')
-    if prompt and len(prompt) > 200:
-        errors.append("Prompt must be 200 characters or less")
+        for i, img in enumerate(images):
+            img_errors = validate_image(img, i + 1)
+            errors.extend(img_errors)
+
+    # Validate prompt length
+    if prompt and len(prompt) > 500:
+        errors.append("Prompt must be 500 characters or less")
 
     return len(errors) == 0, errors
 

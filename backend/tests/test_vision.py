@@ -4,7 +4,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.vision import clean_json_response, MOOD_EXTRACTION_PROMPT
+from services.vision import clean_json_response, MOOD_EXTRACTION_PROMPT_WITH_IMAGES, MOOD_EXTRACTION_PROMPT_TEXT_ONLY
 
 class TestCleanJsonResponse:
 
@@ -31,12 +31,19 @@ class TestCleanJsonResponse:
 
 class TestMoodExtractionPrompt:
 
-    def test_prompt_has_required_fields(self):
-        """Verify the prompt asks for all required fields."""
+    def test_prompt_with_images_has_required_fields(self):
+        """Verify the image prompt asks for all required fields."""
         required = ['name', 'mood', 'color_palette', 'textures', 'key_pieces', 'avoid', 'search_queries']
         for field in required:
-            assert field in MOOD_EXTRACTION_PROMPT, f"Prompt missing field: {field}"
+            assert field in MOOD_EXTRACTION_PROMPT_WITH_IMAGES, f"Image prompt missing field: {field}"
 
-    def test_prompt_has_user_prompt_placeholder(self):
-        """Verify the prompt has a placeholder for user input."""
-        assert '{user_prompt}' in MOOD_EXTRACTION_PROMPT
+    def test_prompt_text_only_has_required_fields(self):
+        """Verify the text-only prompt asks for all required fields."""
+        required = ['name', 'mood', 'color_palette', 'textures', 'key_pieces', 'avoid', 'search_queries']
+        for field in required:
+            assert field in MOOD_EXTRACTION_PROMPT_TEXT_ONLY, f"Text-only prompt missing field: {field}"
+
+    def test_prompts_have_user_prompt_placeholder(self):
+        """Verify both prompts have a placeholder for user input."""
+        assert '{user_prompt}' in MOOD_EXTRACTION_PROMPT_WITH_IMAGES
+        assert '{user_prompt}' in MOOD_EXTRACTION_PROMPT_TEXT_ONLY

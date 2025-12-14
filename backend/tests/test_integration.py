@@ -31,22 +31,32 @@ class TestHealthEndpoint:
 
 class TestMoodcheckValidation:
 
-    def test_missing_body(self, client):
+    def test_empty_request(self, client):
+        """Empty request (no images, no prompt) should fail."""
         response = client.post('/api/moodcheck',
                                content_type='application/json',
                                data='{}')
         assert response.status_code == 400
         data = json.loads(response.data)
         assert data['success'] is False
-        assert 'images' in str(data['details'])
+        assert 'provide images and/or describe' in str(data['details'])
 
-    def test_empty_images(self, client):
+    def test_empty_images_no_prompt(self, client):
+        """Empty images array with no prompt should fail."""
         response = client.post('/api/moodcheck',
                                content_type='application/json',
                                data=json.dumps({'images': []}))
         assert response.status_code == 400
         data = json.loads(response.data)
         assert data['success'] is False
+
+    def test_text_only_valid(self, client):
+        """Text-only request (no images) should be accepted for validation."""
+        response = client.post('/api/moodcheck',
+                               content_type='application/json',
+                               data=json.dumps({'prompt': 'coastal grandmother aesthetic'}))
+        # Will fail at API call stage, but should pass validation (not 400)
+        assert response.status_code in [200, 500]  # 500 = API error, but passed validation
 
     def test_too_many_images(self, client):
         response = client.post('/api/moodcheck',
@@ -67,11 +77,11 @@ class TestMoodcheckValidation:
                                content_type='application/json',
                                data=json.dumps({
                                    'images': [VALID_IMAGE],
-                                   'prompt': 'x' * 201
+                                   'prompt': 'x' * 501
                                }))
         assert response.status_code == 400
         data = json.loads(response.data)
-        assert '200 characters' in str(data['details'])
+        assert '500 characters' in str(data['details'])
 
 
 class TestMoodcheckSuccess:
@@ -82,8 +92,8 @@ class TestMoodcheckSuccess:
     """
 
     @pytest.mark.slow
-    def test_successful_moodcheck(self, client):
-        """Test a full successful moodcheck flow."""
+    def test_successful_moodcheck_with_image(self, client):
+        """Test a full successful moodcheck flow with images."""
         response = client.post('/api/moodcheck',
                                content_type='application/json',
                                data=json.dumps({
@@ -112,6 +122,19 @@ class TestMoodcheckSuccess:
         # Check search queries
         assert 'search_queries_used' in data
         assert isinstance(data['search_queries_used'], list)
+
+    @pytest.mark.slow
+    def test_successful_moodcheck_text_only(self, client):
+        """Test a full successful moodcheck flow with text only."""
+        response = client.post('/api/moodcheck',
+                               content_type='application/json',
+                               data=json.dumps({
+                                   'prompt': 'dark academia aesthetic with vintage vibes'
+                               }))
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] is True
 
     @pytest.mark.slow
     def test_moodcheck_with_budget_prompt(self, client):
