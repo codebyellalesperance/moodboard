@@ -9,7 +9,7 @@ const fileToBase64 = (file) => {
 }
 
 // Main API function
-export async function getMoodcheck(images, prompt) {
+export async function getMoodcheck(images, prompt, options = {}) {
     // Convert images to base64 (if any)
     const base64Images = images.length > 0
         ? await Promise.all(images.map(file => fileToBase64(file)))
@@ -25,7 +25,8 @@ export async function getMoodcheck(images, prompt) {
         },
         body: JSON.stringify({
             images: base64Images,
-            prompt: prompt || ''
+            prompt: prompt || '',
+            max_products: options.maxProducts || 20
         })
     })
 

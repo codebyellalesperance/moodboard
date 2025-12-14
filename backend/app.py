@@ -7,6 +7,7 @@ from utils.validation import validate_moodcheck_request
 from utils.logger import logger
 from services.vision import extract_mood
 from services.shopping import search_all_queries, detect_budget_from_prompt
+from services.trends import get_trend_summary
 import time
 
 # Validate config on startup
@@ -30,6 +31,27 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'service': 'moodboard-api'
+    })
+
+
+@app.route('/api/trend/<keyword>', methods=['GET'])
+@limiter.limit("30 per minute")
+def get_trend(keyword):
+    """
+    Get trend data for an aesthetic/keyword.
+
+    Returns:
+        - direction: "rising" | "falling" | "stable" | "unknown"
+        - change: percentage string like "+34%" or "-12%"
+        - sparkline: list of values for mini chart
+        - peak: when the trend peaked
+        - current: current interest value (0-100)
+    """
+    logger.info(f"Trend request for: {keyword}")
+    trend = get_trend_summary(keyword)
+    return jsonify({
+        'success': True,
+        'trend': trend
     })
 
 
@@ -71,6 +93,7 @@ def moodcheck():
 
     images = data.get('images', [])
     prompt = data.get('prompt', '')
+    max_products = min(data.get('max_products', 20), 50)  # Cap at 50
 
     # Step 2: Extract mood from images
     try:
@@ -92,14 +115,28 @@ def moodcheck():
         shopping_start = time.time()
         search_queries = mood_profile.get('search_queries', [])
         budget = detect_budget_from_prompt(prompt)
-        products = search_all_queries(search_queries, max_products=20, budget=budget)
+        products = search_all_queries(search_queries, max_products=max_products, budget=budget)
         shopping_time = time.time() - shopping_start
         logger.info(f"ShopStyle completed in {shopping_time:.2f}s - Found {len(products)} products")
     except Exception as e:
         logger.error(f"Shopping API error: {e}")
         products = []
 
-    # Step 4: Build response
+    # Step 4: Get trend data for the vibe
+    trend = None
+    vibe_name = mood_profile.get('name', '')
+    if vibe_name:
+        try:
+            logger.info(f"Fetching trend data for '{vibe_name}'...")
+            trend_start = time.time()
+            trend = get_trend_summary(vibe_name)
+            trend_time = time.time() - trend_start
+            logger.info(f"Trend data fetched in {trend_time:.2f}s - Direction: {trend.get('direction')}")
+        except Exception as e:
+            logger.error(f"Trend API error: {e}")
+            trend = None
+
+    # Step 5: Build response
     response = {
         'success': True,
         'vibe': {
@@ -110,6 +147,7 @@ def moodcheck():
             'key_pieces': mood_profile.get('key_pieces', []),
             'avoid': mood_profile.get('avoid', [])
         },
+        'trend': trend,
         'products': products,
         'search_queries_used': search_queries[:8]
     }

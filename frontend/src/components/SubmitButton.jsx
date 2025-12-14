@@ -10,19 +10,19 @@ function SubmitButton({ disabled, onClick, loading }) {
                 transition-all duration-500 relative overflow-hidden group
                 ${disabled
                     ? 'glass theme-text-tertiary cursor-not-allowed opacity-60'
-                    : 'bg-gradient-to-r from-[var(--accent)] via-[var(--accent-muted)] to-[var(--accent)] text-[var(--bg-primary)] hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]'
+                    : 'bg-gradient-to-r from-[var(--bg-secondary)] via-[var(--bg-primary)] to-[var(--bg-secondary)] text-[var(--accent)] border border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]'
                 }
             `}
         >
             {/* Animated background shimmer */}
             {!disabled && !loading && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--glass-border-hover)] to-transparent
                                 translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out" />
             )}
 
             {/* Glow effect */}
             {!disabled && (
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent)] to-[var(--accent-muted)] opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--glass-border)] to-[var(--glass-border-hover)] opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500" />
             )}
 
             <div className="relative z-10 flex items-center justify-center gap-3">

@@ -1,6 +1,14 @@
-import { Sparkles } from 'lucide-react'
+import { Sparkles, CornerDownLeft } from 'lucide-react'
 
-function PromptInput({ prompt, setPrompt }) {
+function PromptInput({ prompt, setPrompt, onSubmit, canSubmit }) {
+    const handleKeyDown = (e) => {
+        // Submit on Enter (without Shift for newlines)
+        if (e.key === 'Enter' && !e.shiftKey && canSubmit) {
+            e.preventDefault()
+            onSubmit()
+        }
+    }
+
     return (
         <div className="relative">
             {/* Decorative gradient border effect */}
@@ -22,6 +30,7 @@ function PromptInput({ prompt, setPrompt }) {
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     placeholder="e.g., coastal grandmother meets quiet luxury, or 90s minimalist with earth tones, or dark academia for fall..."
                     maxLength={500}
                     rows={4}
@@ -34,11 +43,19 @@ function PromptInput({ prompt, setPrompt }) {
                 {/* Footer */}
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--glass-border)]">
                     <span className="text-xs theme-text-tertiary">
-                        Add images above for better results, or just describe your vibe
+                        Add images for better results, or just describe your vibe
                     </span>
-                    <span className="text-xs theme-text-tertiary tabular-nums px-2 py-1 rounded-full glass">
-                        {prompt.length}/500
-                    </span>
+                    <div className="flex items-center gap-3">
+                        {canSubmit && (
+                            <span className="flex items-center gap-1.5 text-xs theme-text-tertiary opacity-60">
+                                <CornerDownLeft className="w-3 h-3" />
+                                to submit
+                            </span>
+                        )}
+                        <span className="text-xs theme-text-tertiary tabular-nums px-2 py-1 rounded-full glass">
+                            {prompt.length}/500
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

@@ -15,3 +15,6 @@ htmlcov/
 
 # Manual test files
 test_*_manual.py
+
+# Cache
+cache/

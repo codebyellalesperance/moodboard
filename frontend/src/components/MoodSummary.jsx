@@ -1,6 +1,7 @@
 import { Palette, Shirt, Sparkles } from 'lucide-react'
+import TrendCard from './TrendCard'
 
-function MoodSummary({ mood }) {
+function MoodSummary({ mood, trend }) {
     if (!mood) return null
 
     return (
@@ -17,15 +18,23 @@ function MoodSummary({ mood }) {
                 <h2 className="text-5xl font-extralight tracking-tight theme-text-primary">
                     {mood.name}
                 </h2>
+
                 <p className="theme-text-secondary font-light text-lg tracking-wide max-w-md mx-auto">
                     {mood.mood}
                 </p>
             </div>
 
+            {/* Trend Card - Full width */}
+            {trend && trend.direction !== 'unknown' && (
+                <div className="animate-scale-in opacity-0" style={{ animationDelay: '0.15s', animationFillMode: 'forwards' }}>
+                    <TrendCard trend={trend} />
+                </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-6">
                 {/* Palette */}
                 <div className="glass-card rounded-3xl p-8 space-y-6 animate-scale-in opacity-0"
-                    style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
+                    style={{ animationDelay: '0.25s', animationFillMode: 'forwards' }}>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
                             <Palette className="w-5 h-5 theme-text-secondary" />
@@ -39,17 +48,17 @@ function MoodSummary({ mood }) {
                             <div
                                 key={index}
                                 className="group relative animate-scale-in opacity-0"
-                                style={{ animationDelay: `${0.3 + index * 0.1}s`, animationFillMode: 'forwards' }}
+                                style={{ animationDelay: `${0.35 + index * 0.1}s`, animationFillMode: 'forwards' }}
                             >
                                 <div
                                     className="w-14 h-14 rounded-2xl border-2 border-white/10
-                                               shadow-lg transition-all duration-300 
-                                               group-hover:scale-110 group-hover:shadow-xl 
+                                               shadow-lg transition-all duration-300
+                                               group-hover:scale-110 group-hover:shadow-xl
                                                group-hover:rotate-3 cursor-pointer"
                                     style={{ backgroundColor: color.hex }}
                                 />
-                                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] 
-                                 theme-text-secondary opacity-0 group-hover:opacity-100 whitespace-nowrap 
+                                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px]
+                                 theme-text-secondary opacity-0 group-hover:opacity-100 whitespace-nowrap
                                  transition-all duration-300 tracking-wide capitalize font-medium">
                                     {color.name}
                                 </span>
@@ -60,7 +69,7 @@ function MoodSummary({ mood }) {
 
                 {/* Key Pieces */}
                 <div className="glass-card rounded-3xl p-8 space-y-6 animate-scale-in opacity-0"
-                    style={{ animationDelay: '0.35s', animationFillMode: 'forwards' }}>
+                    style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
                             <Shirt className="w-5 h-5 theme-text-secondary" />
@@ -77,7 +86,7 @@ function MoodSummary({ mood }) {
                              text-xs theme-text-primary font-medium tracking-wide
                              hover:bg-[var(--glass-bg-hover)] transition-all duration-300
                              hover:scale-105 cursor-default animate-scale-in opacity-0"
-                                style={{ animationDelay: `${0.45 + index * 0.05}s`, animationFillMode: 'forwards' }}
+                                style={{ animationDelay: `${0.5 + index * 0.05}s`, animationFillMode: 'forwards' }}
                             >
                                 {piece}
                             </span>
