@@ -1,8 +1,7 @@
-import { Sparkles, CornerDownLeft } from 'lucide-react'
+import { Terminal, CornerDownLeft } from 'lucide-react'
 
 function PromptInput({ prompt, setPrompt, onSubmit, canSubmit }) {
     const handleKeyDown = (e) => {
-        // Submit on Enter (without Shift for newlines)
         if (e.key === 'Enter' && !e.shiftKey && canSubmit) {
             e.preventDefault()
             onSubmit()
@@ -10,52 +9,48 @@ function PromptInput({ prompt, setPrompt, onSubmit, canSubmit }) {
     }
 
     return (
-        <div className="relative">
-            {/* Decorative gradient border effect */}
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-[var(--accent)]/20 via-[var(--accent-muted)]/10 to-[var(--accent)]/20 rounded-3xl blur-sm opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+        <div className="w-full">
+            <div className="flex items-center gap-2 mb-2 opacity-70">
+                <Terminal className="w-3 h-3 text-[var(--color-text-secondary)]" />
+                <span className="font-mono text-xs tracking-widest uppercase text-[var(--color-text-secondary)]">
+                    Aesthetic Input_
+                </span>
+            </div>
 
-            <div className="relative glass-card rounded-3xl p-6 group focus-within:border-[var(--glass-border-hover)] transition-all duration-500">
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl glass flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 theme-text-secondary" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-medium theme-text-primary">Describe Your Vibe</h3>
-                        <p className="text-xs theme-text-tertiary">What aesthetic are you going for?</p>
-                    </div>
-                </div>
+            <div className="relative group">
+                <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[var(--color-text-primary)] transition-all group-focus-within:w-4 group-focus-within:h-4" />
+                <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[var(--color-text-primary)] transition-all group-focus-within:w-4 group-focus-within:h-4" />
+                <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[var(--color-text-primary)] transition-all group-focus-within:w-4 group-focus-within:h-4" />
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[var(--color-text-primary)] transition-all group-focus-within:w-4 group-focus-within:h-4" />
 
-                {/* Textarea */}
                 <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="e.g., coastal grandmother meets quiet luxury, or 90s minimalist with earth tones, or dark academia for fall..."
+                    placeholder="// Describe aesthetic parameters, e.g. 'Cyberpunk concrete jungle' or '90s minimalist tech'..."
                     maxLength={500}
                     rows={4}
-                    className="w-full bg-transparent theme-text-primary
-                         placeholder:theme-text-tertiary placeholder:text-sm
-                         focus:outline-none resize-none
-                         text-base font-light leading-relaxed"
+                    className="w-full bg-[var(--bg-secondary)] text-[var(--color-text-primary)]
+                         placeholder:text-[var(--color-text-secondary)] placeholder:opacity-40
+                         focus:outline-none focus:bg-[var(--bg-secondary)]
+                         text-lg font-light leading-relaxed p-6
+                         border-l border-r border-[var(--border-color)]"
                 />
+            </div>
 
-                {/* Footer */}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--glass-border)]">
-                    <span className="text-xs theme-text-tertiary">
-                        Add images for better results, or just describe your vibe
+            <div className="flex justify-between items-center mt-2 px-1">
+                <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">
+                    MAX_CHARS: 500
+                </span>
+                <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">
+                        {prompt.length} / 500
                     </span>
-                    <div className="flex items-center gap-3">
-                        {canSubmit && (
-                            <span className="flex items-center gap-1.5 text-xs theme-text-tertiary opacity-60">
-                                <CornerDownLeft className="w-3 h-3" />
-                                to submit
-                            </span>
-                        )}
-                        <span className="text-xs theme-text-tertiary tabular-nums px-2 py-1 rounded-full glass">
-                            {prompt.length}/500
+                    {canSubmit && (
+                        <span className="font-mono text-[10px] text-[var(--color-accent)] animate-pulse">
+                            [READY]
                         </span>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

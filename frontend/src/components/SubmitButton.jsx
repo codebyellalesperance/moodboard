@@ -1,4 +1,4 @@
-import { Loader2, ArrowRight, Sparkles, Zap } from 'lucide-react'
+import { Component, Loader2, ArrowRight, Sparkles, Zap } from 'lucide-react'
 
 function SubmitButton({ disabled, onClick, loading }) {
     return (
@@ -6,41 +6,37 @@ function SubmitButton({ disabled, onClick, loading }) {
             onClick={onClick}
             disabled={disabled || loading}
             className={`
-                w-full py-6 rounded-2xl font-medium tracking-wide text-base
-                transition-all duration-500 relative overflow-hidden group
+                w-full py-4 text-sm font-mono tracking-[0.2em] uppercase
+                transition-all duration-300 relative group border
                 ${disabled
-                    ? 'glass theme-text-tertiary cursor-not-allowed opacity-60'
-                    : 'bg-gradient-to-r from-[var(--bg-secondary)] via-[var(--bg-primary)] to-[var(--bg-secondary)] text-[var(--accent)] border border-[var(--glass-border)] hover:border-[var(--glass-border-hover)] hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]'
+                    ? 'border-[var(--border-color)] text-[var(--color-text-secondary)] cursor-not-allowed opacity-50'
+                    : 'bg-[var(--color-text-primary)] text-[var(--color-bg-primary)] border-[var(--color-text-primary)] hover:bg-transparent hover:text-[var(--color-text-primary)]'
                 }
             `}
         >
-            {/* Animated background shimmer */}
-            {!disabled && !loading && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--glass-border-hover)] to-transparent
-                                translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out" />
-            )}
-
-            {/* Glow effect */}
-            {!disabled && (
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--glass-border)] to-[var(--glass-border-hover)] opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-500" />
-            )}
-
             <div className="relative z-10 flex items-center justify-center gap-3">
                 {loading ? (
                     <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>Discovering your vibe...</span>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Processing_Data...</span>
                     </>
                 ) : (
                     <>
-                        <Zap className="w-5 h-5" />
-                        <span>Find My Style</span>
+                        <span>Initialize_Search</span>
                         {!disabled && (
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         )}
                     </>
                 )}
             </div>
+
+            {/* Tech Decoration */}
+            {!disabled && (
+                <>
+                    <div className="absolute top-0 right-0 w-2 h-2 bg-[var(--color-bg-primary)] group-hover:bg-[var(--color-text-primary)] transition-colors" />
+                    <div className="absolute bottom-0 left-0 w-2 h-2 bg-[var(--color-bg-primary)] group-hover:bg-[var(--color-text-primary)] transition-colors" />
+                </>
+            )}
         </button>
     )
 }

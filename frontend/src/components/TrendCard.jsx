@@ -3,8 +3,8 @@ import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react'
 function TrendGraph({ data, direction, width = 280, height = 60 }) {
     if (!data || data.length < 2) {
         return (
-            <div className="flex items-center justify-center h-full theme-text-tertiary text-sm">
-                No trend data available
+            <div className="flex items-center justify-center h-full text-[var(--color-text-secondary)] text-xs font-mono">
+                NO_DATA_AVAILABLE
             </div>
         )
     }
@@ -24,29 +24,25 @@ function TrendGraph({ data, direction, width = 280, height = 60 }) {
         return { x, y, value }
     })
 
-    // Create smooth bezier curve path
+    // Create polyline for tech look (sharper than bezier)
     const pathD = points.reduce((acc, point, i) => {
         if (i === 0) return `M ${point.x},${point.y}`
-        const prev = points[i - 1]
-        const cpX = (prev.x + point.x) / 2
-        return `${acc} C ${cpX},${prev.y} ${cpX},${point.y} ${point.x},${point.y}`
+        return `${acc} L ${point.x},${point.y}`
     }, '')
 
-    // Area path for gradient fill
+    // Area path
     const areaD = `${pathD} L ${points[points.length - 1].x},${height - padding.bottom} L ${padding.left},${height - padding.bottom} Z`
 
-    // Colors based on direction
+    // Colors - Monochrome/Neon Tech
     const colors = {
-        rising: { stroke: '#34d399', gradient: ['rgba(52, 211, 153, 0.3)', 'rgba(52, 211, 153, 0)'] },
-        falling: { stroke: '#94a3b8', gradient: ['rgba(148, 163, 184, 0.2)', 'rgba(148, 163, 184, 0)'] },
-        stable: { stroke: '#fbbf24', gradient: ['rgba(251, 191, 36, 0.25)', 'rgba(251, 191, 36, 0)'] }
+        rising: { stroke: 'var(--color-text-primary)', gradient: ['var(--color-text-primary, rgba(255, 255, 255, 0.2))', 'rgba(255, 255, 255, 0)'] },
+        falling: { stroke: 'var(--color-text-secondary)', gradient: ['var(--color-text-secondary, rgba(160, 160, 160, 0.2))', 'rgba(160, 160, 160, 0)'] },
+        stable: { stroke: 'var(--color-text-secondary)', gradient: ['var(--color-text-secondary, rgba(170, 170, 170, 0.2))', 'rgba(170, 170, 170, 0)'] }
     }
 
     const { stroke, gradient } = colors[direction] || colors.stable
     const gradientId = `trend-gradient-${direction}`
-
-    // X-axis labels (3 months ago, now)
-    const labels = ['3 months ago', 'Now']
+    const labels = ['-3 MO', 'NOW']
 
     return (
         <svg width={width} height={height} className="w-full">
@@ -65,9 +61,9 @@ function TrendGraph({ data, direction, width = 280, height = 60 }) {
                     y1={padding.top + chartHeight * ratio}
                     x2={width - padding.right}
                     y2={padding.top + chartHeight * ratio}
-                    stroke="var(--glass-border)"
-                    strokeDasharray="4,4"
-                    opacity={0.5}
+                    stroke="var(--border-color)"
+                    strokeDasharray="2,2"
+                    opacity={0.3}
                 />
             ))}
 
@@ -79,40 +75,25 @@ function TrendGraph({ data, direction, width = 280, height = 60 }) {
                 d={pathD}
                 fill="none"
                 stroke={stroke}
-                strokeWidth={2.5}
-                strokeLinecap="round"
+                strokeWidth={1.5}
+                strokeLinecap="square"
                 strokeLinejoin="round"
             />
 
             {/* End point dot */}
-            <circle
-                cx={points[points.length - 1].x}
-                cy={points[points.length - 1].y}
-                r={4}
+            <rect
+                x={points[points.length - 1].x - 2}
+                y={points[points.length - 1].y - 2}
+                width={4}
+                height={4}
                 fill={stroke}
-            />
-            <circle
-                cx={points[points.length - 1].x}
-                cy={points[points.length - 1].y}
-                r={8}
-                fill={stroke}
-                opacity={0.2}
             />
 
             {/* X-axis labels */}
-            <text
-                x={padding.left}
-                y={height - 5}
-                className="text-[10px] fill-[var(--text-tertiary)]"
-            >
+            <text x={padding.left} y={height - 5} className="text-[8px] font-mono fill-[var(--text-secondary)]">
                 {labels[0]}
             </text>
-            <text
-                x={width - padding.right}
-                y={height - 5}
-                textAnchor="end"
-                className="text-[10px] fill-[var(--text-tertiary)]"
-            >
+            <text x={width - padding.right} y={height - 5} textAnchor="end" className="text-[8px] font-mono fill-[var(--content-secondary)]">
                 {labels[1]}
             </text>
         </svg>
@@ -127,51 +108,43 @@ function TrendCard({ trend }) {
     const config = {
         rising: {
             icon: TrendingUp,
-            label: 'Rising',
-            description: 'This aesthetic is gaining popularity',
-            colorClass: 'text-emerald-400',
-            bgClass: 'bg-emerald-500/10'
+            label: 'Uptrend',
+            description: 'Gaining momentum',
+            colorClass: 'text-[var(--color-text-primary)]'
         },
         falling: {
             icon: TrendingDown,
-            label: 'Cooling Off',
-            description: 'Interest has decreased recently',
-            colorClass: 'text-slate-400',
-            bgClass: 'bg-slate-500/10'
+            label: 'Downtrend',
+            description: 'Declining interest',
+            colorClass: 'text-[var(--color-text-secondary)]'
         },
         stable: {
             icon: Minus,
-            label: 'Steady',
-            description: 'Consistent interest over time',
-            colorClass: 'text-amber-400',
-            bgClass: 'bg-amber-500/10'
+            label: 'Stable',
+            description: 'Consistent volume',
+            colorClass: 'text-[var(--color-text-secondary)]'
         }
     }
 
-    const { icon: Icon, label, description, colorClass, bgClass } = config[trend.direction] || config.stable
+    const { icon: Icon, label, colorClass } = config[trend.direction] || config.stable
 
     return (
-        <div className="glass-card rounded-2xl p-4 animate-scale-in">
-            <div className="flex items-center gap-4">
+        <div className="border border-[var(--border-color)] p-6 animate-scale-in bg-[var(--bg-secondary)]">
+            <div className="flex items-center gap-6">
                 {/* Left: Icon + Label */}
-                <div className="flex items-center gap-3 shrink-0">
-                    <div className={`w-8 h-8 rounded-lg ${bgClass} flex items-center justify-center`}>
-                        <Activity className={`w-4 h-4 ${colorClass}`} />
+                <div className="shrink-0 space-y-2">
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)]">Market_Signal</p>
+                    <div className="flex items-center gap-2">
+                        <Icon className={`w-4 h-4 ${colorClass}`} />
+                        <span className={`font-mono text-sm uppercase ${colorClass}`}>{label}</span>
                     </div>
-                    <div>
-                        <p className="text-xs theme-text-tertiary">Trend</p>
-                        <div className="flex items-center gap-1.5">
-                            <Icon className={`w-3.5 h-3.5 ${colorClass}`} />
-                            <span className={`text-sm font-medium ${colorClass}`}>{label}</span>
-                            {trend.change && (
-                                <span className={`text-sm font-bold ${colorClass}`}>{trend.change}</span>
-                            )}
-                        </div>
-                    </div>
+                    {trend.change && (
+                        <span className="block font-sans text-xs text-[var(--color-text-primary)]">{trend.change}</span>
+                    )}
                 </div>
 
                 {/* Center: Graph */}
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 border-l border-[var(--border-color)] pl-6">
                     <TrendGraph
                         data={trend.sparkline}
                         direction={trend.direction}
@@ -182,17 +155,11 @@ function TrendCard({ trend }) {
 
                 {/* Right: Stats */}
                 {trend.current !== null && (
-                    <div className="flex items-center gap-4 shrink-0 text-right">
+                    <div className="shrink-0 text-right border-l border-[var(--border-color)] pl-6 space-y-2">
                         <div>
-                            <p className="text-[10px] theme-text-tertiary uppercase">Now</p>
-                            <p className="text-sm font-medium theme-text-primary">{trend.current}</p>
+                            <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)]">Volume</p>
+                            <p className="font-serif text-xl italic text-[var(--color-text-primary)]">{trend.current}</p>
                         </div>
-                        {trend.peak && trend.peak !== 'now' && (
-                            <div>
-                                <p className="text-[10px] theme-text-tertiary uppercase">Peak</p>
-                                <p className="text-sm font-medium theme-text-primary capitalize">{trend.peak}</p>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>

@@ -10,7 +10,7 @@ import ProductFilters, { filterProducts, DEFAULT_FILTERS } from './components/Pr
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorMessage from './components/ErrorMessage'
 import { getMoodcheck } from './utils/api'
-import { ArrowLeft, Sparkles } from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 
 function AppContent() {
   const [images, setImages] = useState([])
@@ -20,10 +20,8 @@ function AppContent() {
   const [error, setError] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
 
-  // Check if we have enough input to submit (images OR prompt)
   const canSubmit = images.length > 0 || prompt.trim().length > 0
 
-  // Filter products based on current filters
   const filteredProducts = useMemo(() => {
     if (!results?.products) return []
     return filterProducts(results.products, filters)
@@ -32,7 +30,6 @@ function AppContent() {
   const handleSubmit = async () => {
     setLoading(true)
     setError(null)
-
     try {
       const data = await getMoodcheck(images, prompt)
       setResults({
@@ -63,20 +60,12 @@ function AppContent() {
 
     setIsReloadingFilter(true)
     try {
-      // Build a more specific prompt based on the filter
       const filterPrompt = category
         ? `${results.vibe.name} style ${category.toLowerCase()}`
         : `${results.vibe.name} from ${retailer}`
 
       const data = await getMoodcheck([], filterPrompt, { maxProducts: 30 })
-
-      // Merge or replace products
-      setResults(prev => ({
-        ...prev,
-        products: data.products
-      }))
-
-      // Clear filters since we now have filtered results
+      setResults(prev => ({ ...prev, products: data.products }))
       setFilters(DEFAULT_FILTERS)
     } catch (err) {
       console.error('Reload error:', err)
@@ -85,116 +74,76 @@ function AppContent() {
     }
   }
 
-  // Results view
+  // Results View
   if (results) {
     return (
-      <div className="min-h-screen pb-32 relative overflow-hidden">
-        {/* Decorative orbs */}
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="orb orb-3" />
+      <div className="min-h-screen p-4 md:p-8 relative">
+        <Header />
 
-        <div className="max-w-[1300px] mx-auto px-8 lg:px-16 relative z-10">
-          <Header />
-
-          <main className="mt-16 space-y-24 animate-slide-up">
-            <MoodSummary mood={results.mood} trend={results.trend} />
-
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full glass">
-                  <Sparkles className="w-4 h-4 theme-text-secondary" />
-                  <span className="text-xs font-medium tracking-[0.2em] theme-text-secondary uppercase">
-                    Curated For You
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ProductFilters
-                    products={results.products}
-                    filters={filters}
-                    setFilters={setFilters}
-                    onReloadWithFilter={handleReloadWithFilter}
-                    isReloading={isReloadingFilter}
-                  />
-                  <span className="text-sm theme-text-tertiary">
-                    {filteredProducts.length} of {results.products.length} items
-                  </span>
-                </div>
+        <main className="magazine-grid max-w-[1600px] mx-auto">
+          {/* Main Editorial Content */}
+          <div className="col-span-12 lg:col-span-9 animate-fade-in pr-0 lg:pr-8">
+            <div className="flex justify-between items-end mb-8 border-b border-[var(--border-color)] pb-2">
+              <h2 className="font-serif text-4xl italic">Curated Selection</h2>
+              <div className="flex items-center gap-6 mb-1">
+                <span className="font-mono text-xs">{filteredProducts.length} ITEMS FOUND</span>
+                <ProductFilters
+                  products={results.products}
+                  filters={filters}
+                  setFilters={setFilters}
+                  onReloadWithFilter={handleReloadWithFilter}
+                  isReloading={isReloadingFilter}
+                />
               </div>
-              {isReloadingFilter ? (
-                <div className="glass-card rounded-3xl py-16 px-8 animate-fade-in">
-                  <div className="flex flex-col items-center justify-center space-y-6">
-                    <div className="relative">
-                      <div className="w-20 h-20 rounded-full border-2 border-[var(--glass-border)] border-t-[var(--accent)] animate-spin" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full border-2 border-[var(--glass-border)] border-b-[var(--accent)] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.6s' }} />
-                      </div>
-                    </div>
-                    <div className="text-center space-y-2">
-                      <p className="text-lg theme-text-primary font-medium">Finding more styles...</p>
-                      <p className="text-sm theme-text-tertiary">Curating 30 items just for you</p>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {[0, 1, 2].map(i => (
-                        <div
-                          key={i}
-                          className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse"
-                          style={{ animationDelay: `${i * 0.2}s` }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <ProductGrid products={filteredProducts} />
-              )}
             </div>
 
-            <div className="max-w-sm mx-auto pt-8">
-              <button
-                onClick={handleStartOver}
-                className="w-full py-5 rounded-2xl glass-card glass-hover
-                           theme-text-secondary hover:theme-text-primary
-                           font-medium tracking-[0.15em] uppercase text-xs
-                           flex items-center justify-center gap-3"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Start Over
+            {isReloadingFilter ? (
+              <div className="h-96 flex flex-col items-center justify-center border border-[var(--border-color)]">
+                <div className="w-4 h-4 bg-[var(--color-text-primary)] animate-spin mb-4" />
+                <span className="font-mono text-xs tracking-widest uppercase">Curating new collection...</span>
+              </div>
+            ) : (
+              <ProductGrid products={filteredProducts} />
+            )}
+          </div>
+
+          {/* Sidebar / Info Column (Now on Right) */}
+          <div className="col-span-12 lg:col-span-3 space-y-12 animate-slide-up order-first lg:order-last">
+            <div className="sticky top-8">
+              <button onClick={handleStartOver} className="mb-8 flex items-center gap-2 text-xs font-mono uppercase tracking-widest hover:underline hover-invert px-4 py-2 border border-transparent hover:border-[var(--color-text-primary)] transition-all">
+                <ArrowLeft className="w-3 h-3" /> Back to Edit
               </button>
+
+              <MoodSummary mood={results.mood} trend={results.trend} />
             </div>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     )
   }
 
-  // Upload view
+  // Input View (Landing)
   return (
-    <div className="min-h-screen pb-32 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen p-4 md:p-8 relative flex flex-col">
       {loading && <LoadingOverlay />}
+      <Header />
 
-      {/* Decorative orbs */}
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
+      <main className="flex-1 flex flex-col items-center justify-center relative max-w-[1400px] mx-auto w-full">
+        <div className="magazine-grid w-full items-center">
 
-      <div className="w-full max-w-[900px] mx-auto px-8 lg:px-12 flex-1 flex flex-col relative z-10">
-        <Header />
+          {/* Left: Text & Prompt */}
+          <div className="col-span-12 lg:col-span-6 space-y-12 pr-0 lg:pr-12">
+            <div className="animate-slide-up">
+              <span className="font-mono text-xs tracking-[0.3em] uppercase opacity-70 mb-4 block">The AI Stylist</span>
+              <h2 className="font-serif text-6xl md:text-8xl leading-[0.9] mb-8">
+                Define <br /> Your <span className="italic">Style</span>
+              </h2>
+              <p className="font-mono text-sm max-w-md border-l border-[var(--border-color)] pl-6 py-2 opacity-80">
+                Upload your inspiration or describe the vision. Our AI curates a high-fashion editorial just for you.
+              </p>
+            </div>
 
-        <main className="flex-1 flex flex-col justify-center py-12">
-          {/* Hero section */}
-          <div className="text-center mb-12 animate-fade-in">
-            <h2 className="text-4xl md:text-5xl font-extralight tracking-tight theme-text-primary mb-4">
-              Shop Your Vibe
-            </h2>
-            <p className="text-base theme-text-secondary font-light max-w-lg mx-auto leading-relaxed">
-              Upload inspiration images, describe your aesthetic, or both — and discover products that match your style
-            </p>
-          </div>
-
-          <div className="space-y-8">
-            {/* Prompt Input - Now more prominent */}
-            <div className="animate-slide-up opacity-0" style={{ animationDelay: '0.1s', animationFillMode: 'forwards' }}>
+            <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
               <PromptInput
                 prompt={prompt}
                 setPrompt={setPrompt}
@@ -202,43 +151,31 @@ function AppContent() {
                 canSubmit={canSubmit && !loading}
               />
             </div>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4 animate-fade-in opacity-0" style={{ animationDelay: '0.2s', animationFillMode: 'forwards' }}>
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
-              <span className="text-xs theme-text-tertiary uppercase tracking-widest">and / or</span>
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
-            </div>
-
-            {/* Image Uploader */}
-            <div className="animate-slide-up opacity-0" style={{ animationDelay: '0.25s', animationFillMode: 'forwards' }}>
-              <ImageUploader images={images} setImages={setImages} />
-            </div>
-
-            {/* Error and Submit */}
-            <div className="space-y-6 animate-slide-up opacity-0" style={{ animationDelay: '0.4s', animationFillMode: 'forwards' }}>
-              {error && (
-                <ErrorMessage
-                  message={error}
-                  onRetry={() => setError(null)}
-                />
-              )}
-
-              <SubmitButton
-                disabled={!canSubmit}
-                onClick={handleSubmit}
-                loading={loading}
-              />
-
-              {!canSubmit && (
-                <p className="text-center text-xs theme-text-tertiary">
-                  Describe your vibe or upload at least one image to continue
-                </p>
-              )}
-            </div>
           </div>
-        </main>
-      </div>
+
+          {/* Right: Upload & Actions */}
+          <div className="col-span-12 lg:col-span-6 mt-12 lg:mt-0 relative animate-slide-in-right">
+            <div className="relative z-10">
+              <div className="absolute -top-6 -left-6">
+                <Plus className="w-4 h-4 text-[var(--color-text-primary)] opacity-50" />
+              </div>
+              <div className="absolute -bottom-6 -right-6">
+                <Plus className="w-4 h-4 text-[var(--color-text-primary)] opacity-50" />
+              </div>
+
+              <ImageUploader images={images} setImages={setImages} />
+
+              <div className="mt-8">
+                {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
+                <SubmitButton disabled={!canSubmit} onClick={handleSubmit} loading={loading} />
+              </div>
+            </div>
+
+            {/* Decorative BG Grid */}
+            <div className="absolute inset-0 border border-[var(--border-color)] opacity-20 -z-10 translate-x-4 translate-y-4" />
+          </div>
+        </div>
+      </main>
     </div>
   )
 }

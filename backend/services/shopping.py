@@ -1,6 +1,10 @@
 import requests
+import logging
 from typing import List, Dict, Optional
 from config import Config
+from utils.image_validator import filter_valid_products
+
+logger = logging.getLogger(__name__)
 
 SHOPSTYLE_BASE_URL = "https://api.shopstyle.com/api/v2"
 
@@ -133,9 +137,12 @@ def search_all_queries(
     elif budget == "luxury":
         min_price = 150
 
+    # Over-fetch to account for invalid images being filtered out
+    fetch_target = int(max_products * 1.5)
+
     # Use up to 8 queries
     queries_to_use = search_queries[:8]
-    products_per_query = max(3, max_products // len(queries_to_use)) if queries_to_use else 0
+    products_per_query = max(3, fetch_target // len(queries_to_use)) if queries_to_use else 0
 
     for query in queries_to_use:
         try:
@@ -153,17 +160,22 @@ def search_all_queries(
                     all_products.append(product)
 
         except Exception as e:
-            print(f"Error searching '{query}': {e}")
+            logger.error(f"Error searching '{query}': {e}")
             continue
 
+    # Validate images (filter out broken/invalid URLs)
+    logger.info(f"Validating {len(all_products)} product images...")
+    validated_products = filter_valid_products(all_products)
+    logger.info(f"Valid images: {len(validated_products)}/{len(all_products)}")
+
     # Sort: in-stock first, then sale items, then by price
-    all_products.sort(key=lambda x: (
+    validated_products.sort(key=lambda x: (
         not x.get("in_stock", True),
         not x.get("on_sale", False),
         x.get("price", 0)
     ))
 
-    return all_products[:max_products]
+    return validated_products[:max_products]
 
 
 def detect_budget_from_prompt(prompt: str) -> Optional[str]:

@@ -74,7 +74,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
 
             {/* Filter Panel */}
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 glass-card rounded-2xl p-4 space-y-4 z-50 animate-scale-in">
+                <div className="absolute top-full right-0 mt-2 w-80 glass-card rounded-2xl p-4 space-y-4 z-50 animate-scale-in">
                     {/* Header */}
                     <div className="flex items-center justify-between pb-2 border-b border-[var(--glass-border)]">
                         <span className="text-sm font-medium theme-text-primary">Filter Results</span>
@@ -96,11 +96,10 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                 <button
                                     key={range.label}
                                     onClick={() => setFilters({ ...filters, priceRange: range })}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                        filters.priceRange?.label === range.label
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.priceRange?.label === range.label
                                             ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
                                             : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
-                                    }`}
+                                        }`}
                                 >
                                     {range.label}
                                 </button>
@@ -117,11 +116,10 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     <button
                                         key={cat}
                                         onClick={() => toggleArrayFilter('categories', cat)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                            filters.categories?.includes(cat)
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.categories?.includes(cat)
                                                 ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
                                                 : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
-                                        }`}
+                                            }`}
                                     >
                                         {cat}
                                     </button>
@@ -139,11 +137,10 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     <button
                                         key={ret}
                                         onClick={() => toggleArrayFilter('retailers', ret)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                            filters.retailers?.includes(ret)
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.retailers?.includes(ret)
                                                 ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
                                                 : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
-                                        }`}
+                                            }`}
                                     >
                                         {ret}
                                     </button>
@@ -157,15 +154,13 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                         <span className="text-sm theme-text-primary">On Sale Only</span>
                         <button
                             onClick={() => setFilters({ ...filters, onSaleOnly: !filters.onSaleOnly })}
-                            className={`w-10 h-6 rounded-full transition-all duration-300 ${
-                                filters.onSaleOnly
+                            className={`w-10 h-6 rounded-full transition-all duration-300 ${filters.onSaleOnly
                                     ? 'bg-emerald-500'
                                     : 'bg-[var(--glass-bg)]'
-                            }`}
+                                }`}
                         >
-                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-300 ${
-                                filters.onSaleOnly ? 'translate-x-5' : 'translate-x-1'
-                            }`} />
+                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-300 ${filters.onSaleOnly ? 'translate-x-5' : 'translate-x-1'
+                                }`} />
                         </button>
                     </div>
 
