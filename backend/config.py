@@ -1,7 +1,13 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from root directory first, then local (local overrides root)
+root_env = Path(__file__).parent.parent / '.env'
+local_env = Path(__file__).parent / '.env'
+
+load_dotenv(root_env)
+load_dotenv(local_env, override=True)
 
 class Config:
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
