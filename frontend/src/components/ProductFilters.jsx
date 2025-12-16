@@ -85,10 +85,10 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                 <ChevronDown className={`w-4 h-4 theme-text-tertiary transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Dark Backdrop */}
+            {/* Click-away backdrop (no blur) */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                    className="fixed inset-0 z-40"
                     onClick={() => setIsOpen(false)}
                 />
             )}
@@ -120,9 +120,9 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                 <button
                                     key={type.label}
                                     onClick={() => toggleArrayFilter('itemTypes', type.label)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.itemTypes?.includes(type.label)
-                                            ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
-                                            : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border border-[var(--border-color)]'
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${filters.itemTypes?.includes(type.label)
+                                            ? 'bg-black/10 dark:bg-white/20 border-[var(--color-text-primary)] theme-text-primary'
+                                            : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border-[var(--border-color)]'
                                         }`}
                                 >
                                     {type.label}
@@ -139,9 +139,9 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                 <button
                                     key={range.label}
                                     onClick={() => setFilters({ ...filters, priceRange: range })}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.priceRange?.label === range.label
-                                            ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
-                                            : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border border-[var(--border-color)]'
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${filters.priceRange?.label === range.label
+                                            ? 'bg-black/10 dark:bg-white/20 border-[var(--color-text-primary)] theme-text-primary'
+                                            : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border-[var(--border-color)]'
                                         }`}
                                 >
                                     {range.label}
@@ -159,9 +159,9 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     <button
                                         key={cat}
                                         onClick={() => toggleArrayFilter('categories', cat)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.categories?.includes(cat)
-                                                ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
-                                                : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${filters.categories?.includes(cat)
+                                                ? 'bg-black/10 dark:bg-white/20 border-[var(--color-text-primary)] theme-text-primary'
+                                                : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary border-transparent'
                                             }`}
                                     >
                                         {cat}
@@ -180,9 +180,9 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     <button
                                         key={ret}
                                         onClick={() => toggleArrayFilter('retailers', ret)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.retailers?.includes(ret)
-                                                ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
-                                                : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${filters.retailers?.includes(ret)
+                                                ? 'bg-black/10 dark:bg-white/20 border-[var(--color-text-primary)] theme-text-primary'
+                                                : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary border-transparent'
                                             }`}
                                     >
                                         {ret}
