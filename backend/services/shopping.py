@@ -289,66 +289,83 @@ def search_all_queries(
 
 def rerank_products_with_ai(products: List[Dict], vibe_profile: Dict) -> List[Dict]:
     """
-    Use GPT to score products for how well they match the vibe.
+    Use GPT-4o with vision to score products based on how well they VISUALLY match the vibe.
+    Analyzes actual product images, not just names/brands.
     Returns products with score >= 6, sorted by score descending.
     """
     if not products:
         return []
 
-    # Limit to 30 products to control costs
-    products_to_score = products[:30]
+    # Limit to 15 products for visual analysis (API handles ~15-20 images well)
+    # We'll score the rest with text-only as fallback
+    products_for_visual = products[:15]
+    products_text_only = products[15:30] if len(products) > 15 else []
 
-    # Build product list for GPT
-    product_list = []
-    for i, p in enumerate(products_to_score):
-        product_list.append({
-            "index": i,
-            "name": p.get("name", ""),
-            "brand": p.get("brand", ""),
-            "retailer": p.get("retailer", ""),
-            "price": p.get("price", 0)
-        })
-
-    # Build brand guidance for AI
+    # Build brand guidance
     curated_sample = ", ".join(list(CURATED_BRANDS)[:8])
     editorial_sample = ", ".join(list(EDITORIAL_BRANDS)[:8])
 
-    prompt = f"""You are a fashion stylist and editor curating products for a client. Score how well each product fits this aesthetic:
+    # Extract color palette for visual matching
+    colors = vibe_profile.get('color_palette', [])
+    color_names = [c.get('name', '') for c in colors[:5]]
+
+    # Build the visual prompt
+    visual_prompt = f"""You are a fashion stylist curating products for a client. Look at each product image and score how well it VISUALLY matches this aesthetic.
 
 AESTHETIC: {vibe_profile.get('name', 'Unknown')}
 MOOD: {vibe_profile.get('mood', '')}
+COLOR PALETTE: {', '.join(color_names)}
 KEY PIECES: {', '.join(vibe_profile.get('key_pieces', []))}
-TEXTURES: {', '.join(vibe_profile.get('textures', []))}
+TEXTURES TO LOOK FOR: {', '.join(vibe_profile.get('textures', []))}
 AVOID: {', '.join(vibe_profile.get('avoid', []))}
 
-BRAND PREFERENCES (give +1 boost to these):
-- Premium/Curated: {curated_sample}, etc.
-- Editorial/Fashion-Forward: {editorial_sample}, etc.
+BRAND PREFERENCES (give +1 boost):
+- Premium: {curated_sample}
+- Editorial: {editorial_sample}
 
-PRODUCTS:
-{json.dumps(product_list, indent=2)}
+I'm showing you {len(products_for_visual)} product images. For each image (in order), score 1-10:
+- 9-10: Perfect visual match - colors, silhouette, texture all align with the aesthetic
+- 7-8: Strong match - looks like it belongs in this wardrobe
+- 5-6: Decent fit - could work but not ideal
+- 3-4: Weak match - wrong colors, style, or vibe
+- 1-2: Completely wrong aesthetic
 
-Score each product 1-10:
-- 9-10: Perfect fit + premium/editorial brand OR unique statement piece
-- 8: Perfect aesthetic fit
-- 6-7: Good fit, would work well in this wardrobe
-- 4-5: Neutral, could work but not ideal
-- 1-3: Wrong aesthetic, doesn't belong
+VISUAL SCORING CRITERIA:
+- Does the COLOR match the palette? (Most important)
+- Does the SILHOUETTE match the aesthetic's energy?
+- Does the TEXTURE/MATERIAL look right?
+- Is it a statement piece or interesting detail that elevates the look?
+- Would this photograph well in a mood board with the aesthetic?
 
-SCORING GUIDANCE:
-- Balance basics with STATEMENT PIECES - we want some showstoppers and conversation starters
-- Give +1 boost to unique, niche, or artisan items that stand out
-- Give +1 boost to recognized premium or editorial brands
-- Prioritize VARIETY - we want tops, bottoms, dresses, shoes, accessories
-- Look for interesting details: unusual silhouettes, bold colors, unique textures, architectural designs
-- Include some avant-garde or fashion-forward pieces alongside wearable basics
+Product details for context:
+"""
 
-Return ONLY a JSON array: [{{"index": 0, "score": 7}}, {{"index": 1, "score": 4}}]"""
+    # Add product metadata
+    for i, p in enumerate(products_for_visual):
+        visual_prompt += f"\nImage {i+1}: {p.get('name', 'Unknown')} by {p.get('brand', 'Unknown')} - ${p.get('price', 0)}"
+
+    visual_prompt += "\n\nReturn ONLY a JSON array with scores: [{\"index\": 1, \"score\": 7}, {\"index\": 2, \"score\": 4}, ...]"
+
+    # Build multimodal content with images
+    content = [{"type": "text", "text": visual_prompt}]
+
+    # Add product images
+    for p in products_for_visual:
+        image_url = p.get("image_url", "")
+        if image_url:
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url,
+                    "detail": "low"  # Use low detail for cost efficiency
+                }
+            })
 
     try:
+        # Use GPT-4o for vision capability
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Use mini for cost efficiency
-            messages=[{"role": "user", "content": prompt}],
+            model="gpt-4o",
+            messages=[{"role": "user", "content": content}],
             max_tokens=1000,
             temperature=0.3
         )
@@ -364,29 +381,107 @@ Return ONLY a JSON array: [{{"index": 0, "score": 7}}, {{"index": 1, "score": 4}
 
         scores = json.loads(response_text)
 
-        # Build score map
-        score_map = {item["index"]: item["score"] for item in scores}
+        # Build score map (GPT returns 1-indexed, convert to 0-indexed)
+        score_map = {}
+        for item in scores:
+            idx = item.get("index", 0)
+            # Handle both 0-indexed and 1-indexed responses
+            if idx > 0 and idx <= len(products_for_visual):
+                score_map[idx - 1] = item["score"]
+            elif idx >= 0 and idx < len(products_for_visual):
+                score_map[idx] = item["score"]
 
-        # Filter and sort by score
+        # Apply scores to visually analyzed products
         scored_products = []
-        for i, product in enumerate(products_to_score):
+        for i, product in enumerate(products_for_visual):
             score = score_map.get(i, 5)
-            if score >= 5:  # Keep products that score 5+ (neutral or better)
+            if score >= 6:  # Raised threshold for better quality
                 product["vibe_score"] = score
+                product["visual_scored"] = True
                 scored_products.append(product)
+
+        logger.info(f"Visual re-ranking: {len(scored_products)}/{len(products_for_visual)} products scored 6+")
+
+        # Score remaining products with text-only (fallback for products 16-30)
+        if products_text_only:
+            text_scored = _rerank_text_only(products_text_only, vibe_profile)
+            scored_products.extend(text_scored)
 
         # Sort by score descending
         scored_products.sort(key=lambda x: x.get("vibe_score", 0), reverse=True)
 
-        # Add back any remaining unscored products at the end
+        # Add back any remaining unscored products at the end (31+)
         if len(products) > 30:
+            for p in products[30:]:
+                p["vibe_score"] = 4  # Default low score for unanalyzed
             scored_products.extend(products[30:])
 
         return scored_products
 
     except Exception as e:
-        logger.error(f"AI re-ranking failed: {e}")
-        # Return original products if re-ranking fails
+        logger.error(f"Visual re-ranking failed: {e}")
+        # Fall back to text-only ranking
+        return _rerank_text_only(products[:30], vibe_profile)
+
+
+def _rerank_text_only(products: List[Dict], vibe_profile: Dict) -> List[Dict]:
+    """
+    Fallback text-only re-ranking when visual analysis isn't possible.
+    Uses product names and brands only.
+    """
+    if not products:
+        return []
+
+    product_list = []
+    for i, p in enumerate(products):
+        product_list.append({
+            "index": i,
+            "name": p.get("name", ""),
+            "brand": p.get("brand", ""),
+            "price": p.get("price", 0)
+        })
+
+    prompt = f"""Score how well each product fits the "{vibe_profile.get('name', 'Unknown')}" aesthetic.
+Mood: {vibe_profile.get('mood', '')}
+Key pieces: {', '.join(vibe_profile.get('key_pieces', []))}
+
+Products:
+{json.dumps(product_list, indent=2)}
+
+Score 1-10. Return ONLY JSON: [{{"index": 0, "score": 7}}]"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.3
+        )
+
+        response_text = response.choices[0].message.content.strip()
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+
+        scores = json.loads(response_text.strip())
+        score_map = {item["index"]: item["score"] for item in scores}
+
+        scored = []
+        for i, product in enumerate(products):
+            score = score_map.get(i, 5)
+            if score >= 6:
+                product["vibe_score"] = score
+                product["visual_scored"] = False
+                scored.append(product)
+
+        return scored
+
+    except Exception as e:
+        logger.error(f"Text-only re-ranking failed: {e}")
+        # Return products with default score
+        for p in products:
+            p["vibe_score"] = 5
         return products
 
 
