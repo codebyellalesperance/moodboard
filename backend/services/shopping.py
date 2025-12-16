@@ -186,26 +186,70 @@ def get_brand_score(brand: str) -> int:
 
 def enhance_queries_with_modifiers(queries: List[str]) -> List[str]:
     """
-    Enhance search queries with trending, editorial, and statement piece modifiers.
-
-    Distribution:
-    - Queries 1-2: Add "trending" prefix
-    - Queries 3-4: Add editorial modifier
-    - Queries 5-6: Add statement/unique modifier
+    Enhance search queries with trending modifier (simplified).
+    Brand-specific queries are now handled separately.
     """
     if not queries:
         return queries
     enhanced = []
-    editorial_modifiers = ["vogue approved", "as seen in magazine"]
-    statement_modifiers = ["statement piece", "unique designer"]
     for i, query in enumerate(queries[:6]):
         if i < 2:
             enhanced.append(f"trending {query}")
-        elif i < 4:
-            enhanced.append(f"{query} {editorial_modifiers[i - 2]}")
         else:
-            enhanced.append(f"{statement_modifiers[i - 4]} {query}")
+            enhanced.append(query)
     return enhanced
+
+
+def create_brand_queries(
+    target_brands: Dict,
+    key_pieces: List[str],
+    budget: Optional[str] = None
+) -> List[str]:
+    """
+    Create brand-specific search queries based on extracted target brands.
+
+    Args:
+        target_brands: Dict with 'aspirational', 'contemporary', 'accessible' lists
+        key_pieces: List of key pieces from the vibe profile
+        budget: User's budget preference (affects which brands to prioritize)
+
+    Returns:
+        List of brand-specific search queries
+    """
+    brand_queries = []
+
+    # Get brands from each tier
+    aspirational = target_brands.get('aspirational', [])[:2]
+    contemporary = target_brands.get('contemporary', [])[:2]
+    accessible = target_brands.get('accessible', [])[:2]
+
+    # Select which tiers to use based on budget
+    if budget == "affordable":
+        # Focus on accessible, some contemporary
+        brands_to_use = accessible + contemporary[:1]
+    elif budget == "luxury":
+        # Focus on aspirational, some contemporary
+        brands_to_use = aspirational + contemporary[:1]
+    else:
+        # Mix of all tiers (default)
+        brands_to_use = contemporary + accessible[:1] + aspirational[:1]
+
+    # Get a few key pieces to pair with brands
+    pieces_for_brands = key_pieces[:3] if key_pieces else ["clothing", "accessories"]
+
+    # Create brand + piece queries
+    for brand in brands_to_use:
+        if brand:
+            # Pick a key piece for this brand
+            piece = pieces_for_brands[len(brand_queries) % len(pieces_for_brands)]
+            brand_queries.append(f"{brand} {piece} women")
+
+    # Also add some pure brand queries for discovery
+    for brand in brands_to_use[:2]:
+        if brand:
+            brand_queries.append(f"{brand} new arrivals women")
+
+    return brand_queries
 
 
 def search_all_queries(
@@ -216,6 +260,7 @@ def search_all_queries(
 ) -> List[Dict]:
     """
     Search multiple queries, filter, re-rank with AI, and return best matches.
+    Now includes brand-specific queries from the vibe profile.
     """
     all_products = []
     seen_ids = set()
@@ -230,9 +275,21 @@ def search_all_queries(
     elif budget == "luxury":
         min_price = 150
 
-    # Use up to 6 queries, enhanced with trending/editorial modifiers
-    queries_to_use = enhance_queries_with_modifiers(search_queries[:6])
-    logger.info(f"Enhanced queries: {queries_to_use}")
+    # Build query list: enhanced base queries + brand-specific queries
+    base_queries = enhance_queries_with_modifiers(search_queries[:5])
+
+    # Add brand-specific queries if we have target brands
+    brand_queries = []
+    if vibe_profile:
+        target_brands = vibe_profile.get('target_brands', {})
+        key_pieces = vibe_profile.get('key_pieces', [])
+        if target_brands:
+            brand_queries = create_brand_queries(target_brands, key_pieces, budget)
+            logger.info(f"Brand queries: {brand_queries}")
+
+    # Combine: 5 base queries + up to 4 brand queries = max 9 parallel searches
+    queries_to_use = base_queries + brand_queries[:4]
+    logger.info(f"Total queries ({len(queries_to_use)}): {queries_to_use}")
     products_per_query = 10  # Get 10 products per query
 
     # Run all queries in parallel for speed
@@ -248,16 +305,21 @@ def search_all_queries(
             logger.error(f"Error searching '{query}': {e}")
             return []
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=9) as executor:
         futures = {executor.submit(fetch_query, q): q for q in queries_to_use}
         for future in as_completed(futures):
+            query = futures[future]
             products = future.result()
+            is_brand_query = query in brand_queries
             for product in products:
                 product_key = product["id"] + product.get("product_url", "")
                 if product_key not in seen_ids:
                     seen_ids.add(product_key)
                     # Add brand score for curated/editorial brand boosting
                     product["brand_score"] = get_brand_score(product.get("brand", ""))
+                    # Mark products from brand queries for potential boost
+                    if is_brand_query:
+                        product["from_brand_query"] = True
                     all_products.append(product)
 
     logger.info(f"Fetched {len(all_products)} total products from {len(queries_to_use)} parallel queries")
@@ -276,12 +338,13 @@ def search_all_queries(
         trusted_products = rerank_products_with_ai(trusted_products, vibe_profile)
         logger.info(f"After AI re-ranking: {len(trusted_products)} products")
 
-    # Sort: by vibe score (highest first), then brand score, then on-sale, then by price
+    # Sort: by vibe score (highest first), then brand query boost, then brand score, then on-sale, then by price
     trusted_products.sort(key=lambda x: (
-        -x.get("vibe_score", 5),     # Higher vibe scores first
-        -x.get("brand_score", 0),    # Higher brand scores second
-        not x.get("on_sale", False), # Sale items third
-        x.get("price", 0)            # Lower prices last
+        -x.get("vibe_score", 5),          # Higher vibe scores first
+        -int(x.get("from_brand_query", False)),  # Products from target brand queries
+        -x.get("brand_score", 0),         # Higher brand scores third
+        not x.get("on_sale", False),      # Sale items fourth
+        x.get("price", 0)                 # Lower prices last
     ))
 
     return trusted_products[:max_products]

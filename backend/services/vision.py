@@ -31,6 +31,12 @@ Return a JSON object with EXACTLY these fields (no additional text, just JSON):
 
   "avoid": ["thing1", "thing2", "thing3"],
 
+  "target_brands": {{
+    "aspirational": ["Luxury/designer brand that epitomizes this aesthetic", "Another high-end brand"],
+    "contemporary": ["Mid-range brand perfect for this vibe", "Another contemporary option"],
+    "accessible": ["Budget-friendly brand that nails this look", "Another affordable option"]
+  }},
+
   "search_queries": [
     "tops query (e.g., 'cream linen blouse women')",
     "bottoms query (e.g., 'wide leg linen pants women')",
@@ -48,6 +54,10 @@ Important rules:
 - textures should have 4-6 items
 - key_pieces should have 5-7 items
 - avoid should have 3-5 items
+- target_brands should have 2 brands per tier (aspirational, contemporary, accessible) that genuinely match this aesthetic
+  - Aspirational: Designer/luxury brands (e.g., The Row, Toteme, Khaite for quiet luxury; Ganni, Isabel Marant for boho)
+  - Contemporary: Mid-range brands (e.g., Aritzia, Reformation, COS for minimalist; Free People for boho)
+  - Accessible: Budget-friendly (e.g., H&M, Zara, Uniqlo, ASOS)
 - search_queries MUST have 8-10 queries covering DIFFERENT categories: tops, bottoms, dresses, outerwear, shoes, bags, jewelry, accessories
 - Each query should be specific and shoppable (e.g., "boho flowy maxi dress women" not just "dress")
 - Include style descriptors + product type + "women" or "men" in each query
@@ -147,6 +157,14 @@ def extract_mood(images: list, prompt: str = "") -> dict:
     for field in required_fields:
         if field not in mood_profile:
             raise Exception(f"Mood profile missing required field: {field}")
+
+    # Ensure target_brands exists with fallback structure
+    if 'target_brands' not in mood_profile:
+        mood_profile['target_brands'] = {
+            'aspirational': [],
+            'contemporary': [],
+            'accessible': []
+        }
 
     return mood_profile
 
