@@ -11,7 +11,7 @@ load_dotenv(local_env, override=True)
 
 class Config:
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    SHOPSTYLE_PID = os.getenv('SHOPSTYLE_PID')
+    SERPAPI_KEY = os.getenv('SERPAPI_KEY')
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     PORT = int(os.getenv('PORT', 5000))
 
@@ -21,8 +21,8 @@ class Config:
         missing = []
         if not cls.OPENAI_API_KEY:
             missing.append('OPENAI_API_KEY')
-        if not cls.SHOPSTYLE_PID:
-            missing.append('SHOPSTYLE_PID')
+        if not cls.SERPAPI_KEY:
+            missing.append('SERPAPI_KEY')
 
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")

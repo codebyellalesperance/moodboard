@@ -111,13 +111,18 @@ def moodcheck():
 
     # Step 3: Search for products
     try:
-        logger.info("Searching ShopStyle...")
+        logger.info("Searching Google Shopping...")
         shopping_start = time.time()
         search_queries = mood_profile.get('search_queries', [])
         budget = detect_budget_from_prompt(prompt)
-        products = search_all_queries(search_queries, max_products=max_products, budget=budget)
+        products = search_all_queries(
+            search_queries,
+            max_products=max_products,
+            budget=budget,
+            vibe_profile=mood_profile
+        )
         shopping_time = time.time() - shopping_start
-        logger.info(f"ShopStyle completed in {shopping_time:.2f}s - Found {len(products)} products")
+        logger.info(f"Shopping completed in {shopping_time:.2f}s - Found {len(products)} products")
     except Exception as e:
         logger.error(f"Shopping API error: {e}")
         products = []
