@@ -121,7 +121,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     key={type.label}
                                     onClick={() => toggleArrayFilter('itemTypes', type.label)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.itemTypes?.includes(type.label)
-                                            ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
+                                            ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
                                             : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border border-[var(--border-color)]'
                                         }`}
                                 >
@@ -140,7 +140,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     key={range.label}
                                     onClick={() => setFilters({ ...filters, priceRange: range })}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.priceRange?.label === range.label
-                                            ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
+                                            ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
                                             : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border border-[var(--border-color)]'
                                         }`}
                                 >
@@ -160,7 +160,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                         key={cat}
                                         onClick={() => toggleArrayFilter('categories', cat)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.categories?.includes(cat)
-                                                ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
+                                                ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
                                                 : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
                                             }`}
                                     >
@@ -181,7 +181,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                         key={ret}
                                         onClick={() => toggleArrayFilter('retailers', ret)}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.retailers?.includes(ret)
-                                                ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
+                                                ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)] border border-[var(--color-text-primary)]'
                                                 : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
                                             }`}
                                     >
