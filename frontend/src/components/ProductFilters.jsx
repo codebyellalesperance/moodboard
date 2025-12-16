@@ -95,7 +95,10 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
 
             {/* Filter Panel */}
             {isOpen && (
-                <div className="absolute top-full right-0 mt-2 w-80 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-2xl p-4 space-y-4 z-50 animate-scale-in shadow-2xl">
+                <div
+                    className="absolute top-full right-0 mt-2 w-80 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-2xl p-4 space-y-4 z-50 animate-scale-in shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     {/* Header */}
                     <div className="flex items-center justify-between pb-2 border-b border-[var(--glass-border)]">
                         <span className="text-sm font-medium theme-text-primary">Filter Results</span>

@@ -18,8 +18,14 @@ function AppContent() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [filters, setFiltersState] = useState(DEFAULT_FILTERS)
   const [displayedCount, setDisplayedCount] = useState(20)
+
+  // Wrapper to reset displayedCount when filters change
+  const setFilters = (newFilters) => {
+    setFiltersState(newFilters)
+    setDisplayedCount(20)
+  }
 
   const canSubmit = images.length > 0 || prompt.trim().length > 0
 
@@ -58,7 +64,7 @@ function AppContent() {
     setPrompt('')
     setResults(null)
     setError(null)
-    setFilters(DEFAULT_FILTERS)
+    setFiltersState(DEFAULT_FILTERS)
     setDisplayedCount(20)
   }
 
@@ -79,7 +85,7 @@ function AppContent() {
 
       const data = await getMoodcheck([], filterPrompt, { maxProducts: 50 })
       setResults(prev => ({ ...prev, products: data.products }))
-      setFilters(DEFAULT_FILTERS)
+      setFiltersState(DEFAULT_FILTERS)
       setDisplayedCount(20)
     } catch (err) {
       console.error('Reload error:', err)
