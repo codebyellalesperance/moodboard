@@ -186,24 +186,25 @@ def get_brand_score(brand: str) -> int:
 
 def enhance_queries_with_modifiers(queries: List[str]) -> List[str]:
     """
-    Enhance search queries with trending and editorial modifiers.
+    Enhance search queries with trending, editorial, and statement piece modifiers.
 
     Distribution:
     - Queries 1-2: Add "trending" prefix
     - Queries 3-4: Add editorial modifier
-    - Queries 5-6: Keep original
+    - Queries 5-6: Add statement/unique modifier
     """
     if not queries:
         return queries
     enhanced = []
     editorial_modifiers = ["vogue approved", "as seen in magazine"]
+    statement_modifiers = ["statement piece", "unique designer"]
     for i, query in enumerate(queries[:6]):
         if i < 2:
             enhanced.append(f"trending {query}")
         elif i < 4:
             enhanced.append(f"{query} {editorial_modifiers[i - 2]}")
         else:
-            enhanced.append(query)
+            enhanced.append(f"{statement_modifiers[i - 4]} {query}")
     return enhanced
 
 
@@ -328,17 +329,19 @@ PRODUCTS:
 {json.dumps(product_list, indent=2)}
 
 Score each product 1-10:
-- 9-10: Perfect fit + premium/editorial brand
+- 9-10: Perfect fit + premium/editorial brand OR unique statement piece
 - 8: Perfect aesthetic fit
 - 6-7: Good fit, would work well in this wardrobe
 - 4-5: Neutral, could work but not ideal
 - 1-3: Wrong aesthetic, doesn't belong
 
 SCORING GUIDANCE:
-- Be generous with basics (tees, jeans, simple pieces) that are versatile
+- Balance basics with STATEMENT PIECES - we want some showstoppers and conversation starters
+- Give +1 boost to unique, niche, or artisan items that stand out
 - Give +1 boost to recognized premium or editorial brands
 - Prioritize VARIETY - we want tops, bottoms, dresses, shoes, accessories
-- Trending/editorial pieces that match the vibe should score higher
+- Look for interesting details: unusual silhouettes, bold colors, unique textures, architectural designs
+- Include some avant-garde or fashion-forward pieces alongside wearable basics
 
 Return ONLY a JSON array: [{{"index": 0, "score": 7}}, {{"index": 1, "score": 4}}]"""
 
