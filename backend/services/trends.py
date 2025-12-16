@@ -2,7 +2,6 @@ import logging
 import requests
 import json
 from urllib.parse import quote
-from utils.trend_cache import get_cached, set_cached
 
 logger = logging.getLogger(__name__)
 
@@ -16,22 +15,18 @@ def get_trend_data(keyword: str, use_cache: bool = True) -> dict | None:
     Fetch trend data for a keyword from Google Trends.
     Uses direct HTTP requests to avoid pytrends dependency issues.
 
+    NOTE: This function is currently unused. Cache functionality disabled.
+
     Args:
         keyword: The search term (e.g., "quiet luxury", "coquette aesthetic")
-        use_cache: Whether to use cached data if available
+        use_cache: Whether to use cached data if available (currently ignored)
 
     Returns:
         Dict with trend data or None if request fails
     """
     keyword = keyword.lower().strip()
 
-    # Check cache first
-    if use_cache:
-        cached = get_cached(keyword)
-        if cached is not None:
-            logger.info(f"Trend cache hit for '{keyword}'")
-            return cached
-
+    # Cache functionality removed - trend_cache.py moved to _archive
     logger.info(f"Fetching trend data for '{keyword}'")
 
     try:
@@ -43,29 +38,22 @@ def get_trend_data(keyword: str, use_cache: bool = True) -> dict | None:
 
         if interest_df.empty:
             logger.warning(f"No trend data found for '{keyword}'")
-            empty_result = {'keyword': keyword, 'data': [], 'error': 'no_data'}
-            set_cached(keyword, empty_result)
-            return empty_result
+            return {'keyword': keyword, 'data': [], 'error': 'no_data'}
 
         data_points = interest_df[keyword].tolist()
         dates = [d.strftime('%Y-%m-%d') for d in interest_df.index]
 
-        result = {
+        return {
             'keyword': keyword,
             'data': data_points,
             'dates': dates,
             'timeframe': 'today 3-m'
         }
 
-        set_cached(keyword, result)
-        return result
-
     except Exception as e:
         logger.warning(f"Pytrends failed for '{keyword}': {str(e)}, using fallback")
         # Return graceful fallback - trend feature degrades but doesn't break app
-        fallback_result = {'keyword': keyword, 'data': [], 'error': 'unavailable'}
-        set_cached(keyword, fallback_result)
-        return fallback_result
+        return {'keyword': keyword, 'data': [], 'error': 'unavailable'}
 
 
 def get_trend_summary(keyword: str) -> dict:

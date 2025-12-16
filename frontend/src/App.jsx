@@ -19,6 +19,7 @@ function AppContent() {
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [displayedCount, setDisplayedCount] = useState(20)
 
   const canSubmit = images.length > 0 || prompt.trim().length > 0
 
@@ -58,6 +59,11 @@ function AppContent() {
     setResults(null)
     setError(null)
     setFilters(DEFAULT_FILTERS)
+    setDisplayedCount(20)
+  }
+
+  const handleLoadMore = () => {
+    setDisplayedCount(prev => prev + 20)
   }
 
   const [isReloadingFilter, setIsReloadingFilter] = useState(false)
@@ -71,9 +77,10 @@ function AppContent() {
         ? `${results.mood.name} style ${category.toLowerCase()}`
         : `${results.mood.name} from ${retailer}`
 
-      const data = await getMoodcheck([], filterPrompt, { maxProducts: 30 })
+      const data = await getMoodcheck([], filterPrompt, { maxProducts: 50 })
       setResults(prev => ({ ...prev, products: data.products }))
       setFilters(DEFAULT_FILTERS)
+      setDisplayedCount(20)
     } catch (err) {
       console.error('Reload error:', err)
     } finally {
@@ -110,7 +117,11 @@ function AppContent() {
                 <span className="font-mono text-xs tracking-widest uppercase">Curating new collection...</span>
               </div>
             ) : (
-              <ProductGrid products={filteredProducts} />
+              <ProductGrid
+                products={filteredProducts}
+                displayedCount={displayedCount}
+                onLoadMore={handleLoadMore}
+              />
             )}
           </div>
 

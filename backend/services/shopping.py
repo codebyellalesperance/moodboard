@@ -32,6 +32,32 @@ TRUSTED_RETAILERS = {
     "amazon", "amazon.com", "zappos", "6pm", "poshmark", "ebay"
 }
 
+# Curated premium brands - quality across price points
+CURATED_BRANDS = {
+    # Contemporary
+    "aritzia", "reformation", "cos", "everlane", "theory", "vince",
+    "eileen fisher", "frame", "agolde", "citizens of humanity",
+    "mother", "rag & bone", "all saints", "reiss", "sandro", "maje",
+    "ba&sh", "ted baker", "equipment", "joie",
+    # Premium Denim
+    "ag jeans", "paige", "dl1961", "j brand", "hudson",
+    # Luxury Accessible
+    "tory burch", "kate spade", "coach", "marc jacobs", "madewell"
+}
+
+# Editorial brands - frequently featured in Vogue, Elle, Harper's Bazaar
+EDITORIAL_BRANDS = {
+    # High Fashion
+    "the row", "toteme", "jacquemus", "khaite", "ganni", "nanushka",
+    "staud", "cult gaia", "by far", "mansur gavriel", "jil sander",
+    "lemaire", "acne studios", "isabel marant", "zimmermann",
+    # Designer
+    "bottega veneta", "loewe", "celine", "the frankie shop",
+    "rohe", "st. agni", "esse studios", "co",
+    # Trending Editorial
+    "alaia", "coperni", "self-portrait", "magda butrym", "rotate"
+}
+
 
 def search_products(
     query: str,
@@ -139,6 +165,48 @@ def is_trusted_retailer(retailer: str) -> bool:
     return False
 
 
+def get_brand_score(brand: str) -> int:
+    """
+    Score brand based on curation lists.
+    Returns: 0=unknown, 1=curated, 2=editorial, 3=both
+    """
+    if not brand:
+        return 0
+    brand_lower = brand.lower().strip()
+    in_curated = any(c in brand_lower or brand_lower in c for c in CURATED_BRANDS)
+    in_editorial = any(e in brand_lower or brand_lower in e for e in EDITORIAL_BRANDS)
+    if in_curated and in_editorial:
+        return 3
+    elif in_editorial:
+        return 2
+    elif in_curated:
+        return 1
+    return 0
+
+
+def enhance_queries_with_modifiers(queries: List[str]) -> List[str]:
+    """
+    Enhance search queries with trending and editorial modifiers.
+
+    Distribution:
+    - Queries 1-2: Add "trending" prefix
+    - Queries 3-4: Add editorial modifier
+    - Queries 5-6: Keep original
+    """
+    if not queries:
+        return queries
+    enhanced = []
+    editorial_modifiers = ["vogue approved", "as seen in magazine"]
+    for i, query in enumerate(queries[:6]):
+        if i < 2:
+            enhanced.append(f"trending {query}")
+        elif i < 4:
+            enhanced.append(f"{query} {editorial_modifiers[i - 2]}")
+        else:
+            enhanced.append(query)
+    return enhanced
+
+
 def search_all_queries(
     search_queries: List[str],
     max_products: int = 20,
@@ -161,8 +229,9 @@ def search_all_queries(
     elif budget == "luxury":
         min_price = 150
 
-    # Use up to 6 queries to balance coverage vs speed
-    queries_to_use = search_queries[:6]
+    # Use up to 6 queries, enhanced with trending/editorial modifiers
+    queries_to_use = enhance_queries_with_modifiers(search_queries[:6])
+    logger.info(f"Enhanced queries: {queries_to_use}")
     products_per_query = 10  # Get 10 products per query
 
     # Run all queries in parallel for speed
@@ -186,6 +255,8 @@ def search_all_queries(
                 product_key = product["id"] + product.get("product_url", "")
                 if product_key not in seen_ids:
                     seen_ids.add(product_key)
+                    # Add brand score for curated/editorial brand boosting
+                    product["brand_score"] = get_brand_score(product.get("brand", ""))
                     all_products.append(product)
 
     logger.info(f"Fetched {len(all_products)} total products from {len(queries_to_use)} parallel queries")
@@ -204,11 +275,12 @@ def search_all_queries(
         trusted_products = rerank_products_with_ai(trusted_products, vibe_profile)
         logger.info(f"After AI re-ranking: {len(trusted_products)} products")
 
-    # Sort: by vibe score (highest first), then on-sale, then by price
+    # Sort: by vibe score (highest first), then brand score, then on-sale, then by price
     trusted_products.sort(key=lambda x: (
-        -x.get("vibe_score", 5),  # Higher scores first
-        not x.get("on_sale", False),
-        x.get("price", 0)
+        -x.get("vibe_score", 5),     # Higher vibe scores first
+        -x.get("brand_score", 0),    # Higher brand scores second
+        not x.get("on_sale", False), # Sale items third
+        x.get("price", 0)            # Lower prices last
     ))
 
     return trusted_products[:max_products]
@@ -236,7 +308,11 @@ def rerank_products_with_ai(products: List[Dict], vibe_profile: Dict) -> List[Di
             "price": p.get("price", 0)
         })
 
-    prompt = f"""You are a fashion stylist curating products for a client. Score how well each product fits this aesthetic:
+    # Build brand guidance for AI
+    curated_sample = ", ".join(list(CURATED_BRANDS)[:8])
+    editorial_sample = ", ".join(list(EDITORIAL_BRANDS)[:8])
+
+    prompt = f"""You are a fashion stylist and editor curating products for a client. Score how well each product fits this aesthetic:
 
 AESTHETIC: {vibe_profile.get('name', 'Unknown')}
 MOOD: {vibe_profile.get('mood', '')}
@@ -244,17 +320,25 @@ KEY PIECES: {', '.join(vibe_profile.get('key_pieces', []))}
 TEXTURES: {', '.join(vibe_profile.get('textures', []))}
 AVOID: {', '.join(vibe_profile.get('avoid', []))}
 
+BRAND PREFERENCES (give +1 boost to these):
+- Premium/Curated: {curated_sample}, etc.
+- Editorial/Fashion-Forward: {editorial_sample}, etc.
+
 PRODUCTS:
 {json.dumps(product_list, indent=2)}
 
 Score each product 1-10:
-- 8-10: Perfect fit, exactly what this aesthetic needs
+- 9-10: Perfect fit + premium/editorial brand
+- 8: Perfect aesthetic fit
 - 6-7: Good fit, would work well in this wardrobe
 - 4-5: Neutral, could work but not ideal
 - 1-3: Wrong aesthetic, doesn't belong
 
-Be generous with basics (tees, jeans, simple pieces) that are versatile.
-Prioritize VARIETY - we want tops, bottoms, dresses, shoes, accessories.
+SCORING GUIDANCE:
+- Be generous with basics (tees, jeans, simple pieces) that are versatile
+- Give +1 boost to recognized premium or editorial brands
+- Prioritize VARIETY - we want tops, bottoms, dresses, shoes, accessories
+- Trending/editorial pieces that match the vibe should score higher
 
 Return ONLY a JSON array: [{{"index": 0, "score": 7}}, {{"index": 1, "score": 4}}]"""
 

@@ -26,7 +26,7 @@ export async function getMoodcheck(images, prompt, options = {}) {
         body: JSON.stringify({
             images: base64Images,
             prompt: prompt || '',
-            max_products: options.maxProducts || 20
+            max_products: options.maxProducts || 50
         })
     })
 
