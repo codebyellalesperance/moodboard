@@ -3,6 +3,7 @@ import json
 import logging
 import openai
 from typing import List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from serpapi import GoogleSearch
 from config import Config
 
@@ -160,31 +161,34 @@ def search_all_queries(
     elif budget == "luxury":
         min_price = 150
 
-    # Use up to 6 queries to avoid too many API calls
+    # Use up to 6 queries to balance coverage vs speed
     queries_to_use = search_queries[:6]
-    products_per_query = max(5, 30 // len(queries_to_use)) if queries_to_use else 0
+    products_per_query = 10  # Get 10 products per query
 
-    for query in queries_to_use:
+    # Run all queries in parallel for speed
+    def fetch_query(query):
         try:
-            products = search_products(
+            return search_products(
                 query=query,
                 num_results=products_per_query,
                 min_price=min_price,
                 max_price=max_price
             )
+        except Exception as e:
+            logger.error(f"Error searching '{query}': {e}")
+            return []
 
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(fetch_query, q): q for q in queries_to_use}
+        for future in as_completed(futures):
+            products = future.result()
             for product in products:
-                # Dedupe by product ID and URL
                 product_key = product["id"] + product.get("product_url", "")
                 if product_key not in seen_ids:
                     seen_ids.add(product_key)
                     all_products.append(product)
 
-        except Exception as e:
-            logger.error(f"Error searching '{query}': {e}")
-            continue
-
-    logger.info(f"Fetched {len(all_products)} total products from {len(queries_to_use)} queries")
+    logger.info(f"Fetched {len(all_products)} total products from {len(queries_to_use)} parallel queries")
 
     # Filter to trusted retailers
     trusted_products = [p for p in all_products if is_trusted_retailer(p.get("retailer", ""))]
@@ -200,8 +204,9 @@ def search_all_queries(
         trusted_products = rerank_products_with_ai(trusted_products, vibe_profile)
         logger.info(f"After AI re-ranking: {len(trusted_products)} products")
 
-    # Sort: on-sale first, then by price
+    # Sort: by vibe score (highest first), then on-sale, then by price
     trusted_products.sort(key=lambda x: (
+        -x.get("vibe_score", 5),  # Higher scores first
         not x.get("on_sale", False),
         x.get("price", 0)
     ))
@@ -231,7 +236,7 @@ def rerank_products_with_ai(products: List[Dict], vibe_profile: Dict) -> List[Di
             "price": p.get("price", 0)
         })
 
-    prompt = f"""You are a fashion stylist. Score these products 1-10 for how well they match this aesthetic:
+    prompt = f"""You are a fashion stylist curating products for a client. Score how well each product fits this aesthetic:
 
 AESTHETIC: {vibe_profile.get('name', 'Unknown')}
 MOOD: {vibe_profile.get('mood', '')}
@@ -242,10 +247,16 @@ AVOID: {', '.join(vibe_profile.get('avoid', []))}
 PRODUCTS:
 {json.dumps(product_list, indent=2)}
 
-Return ONLY a JSON array of objects with "index" and "score" (1-10).
-Score 10 = perfect match, 1 = completely wrong aesthetic.
-Be strict - only score 7+ if the item genuinely fits the vibe.
-Example: [{{"index": 0, "score": 8}}, {{"index": 1, "score": 3}}]"""
+Score each product 1-10:
+- 8-10: Perfect fit, exactly what this aesthetic needs
+- 6-7: Good fit, would work well in this wardrobe
+- 4-5: Neutral, could work but not ideal
+- 1-3: Wrong aesthetic, doesn't belong
+
+Be generous with basics (tees, jeans, simple pieces) that are versatile.
+Prioritize VARIETY - we want tops, bottoms, dresses, shoes, accessories.
+
+Return ONLY a JSON array: [{{"index": 0, "score": 7}}, {{"index": 1, "score": 4}}]"""
 
     try:
         response = client.chat.completions.create(
@@ -273,7 +284,7 @@ Example: [{{"index": 0, "score": 8}}, {{"index": 1, "score": 3}}]"""
         scored_products = []
         for i, product in enumerate(products_to_score):
             score = score_map.get(i, 5)
-            if score >= 6:  # Only keep products that score 6+
+            if score >= 5:  # Keep products that score 5+ (neutral or better)
                 product["vibe_score"] = score
                 scored_products.append(product)
 
@@ -308,3 +319,45 @@ def detect_budget_from_prompt(prompt: str) -> Optional[str]:
             return "luxury"
 
     return None
+
+
+# Item type detection - matches frontend ProductFilters ITEM_TYPES
+ITEM_TYPE_KEYWORDS = {
+    'Tops': ['top', 'tops', 'blouse', 'blouses', 'shirt', 'shirts', 'tee', 'tees', 't-shirt', 't-shirts', 'tank', 'tanks', 'sweater', 'sweaters', 'hoodie', 'hoodies', 'cardigan', 'cardigans', 'pullover', 'cami', 'bodysuit'],
+    'Bottoms': ['pants', 'pant', 'jeans', 'jean', 'trousers', 'shorts', 'skirt', 'skirts', 'leggings'],
+    'Dresses': ['dress', 'dresses', 'gown', 'gowns', 'romper', 'rompers', 'jumpsuit', 'jumpsuits', 'maxi', 'midi'],
+    'Outerwear': ['jacket', 'jackets', 'coat', 'coats', 'blazer', 'blazers', 'vest', 'vests', 'parka', 'puffer', 'trench'],
+    'Shoes': ['shoe', 'shoes', 'boot', 'boots', 'sneaker', 'sneakers', 'sandal', 'sandals', 'heel', 'heels', 'flat', 'flats', 'loafer', 'loafers', 'mule', 'mules'],
+    'Bags': ['bag', 'bags', 'purse', 'purses', 'tote', 'totes', 'clutch', 'backpack', 'backpacks', 'crossbody', 'handbag', 'handbags', 'satchel'],
+    'Jewelry': ['necklace', 'necklaces', 'earring', 'earrings', 'bracelet', 'bracelets', 'ring', 'rings', 'jewelry', 'chain', 'chains', 'pendant'],
+    'Accessories': ['scarf', 'scarves', 'hat', 'hats', 'belt', 'belts', 'sunglasses', 'watch', 'watches', 'headband']
+}
+
+
+def detect_item_type_from_prompt(prompt: str) -> Optional[str]:
+    """Detect if user is asking for a specific item type."""
+    prompt_lower = prompt.lower()
+
+    for item_type, keywords in ITEM_TYPE_KEYWORDS.items():
+        for keyword in keywords:
+            # Check for whole word match (not partial)
+            if f' {keyword} ' in f' {prompt_lower} ' or prompt_lower.startswith(keyword + ' ') or prompt_lower.endswith(' ' + keyword):
+                return item_type
+
+    return None
+
+
+def filter_by_item_type(products: List[Dict], item_type: str) -> List[Dict]:
+    """Filter products to only include specified item type."""
+    if not item_type or item_type not in ITEM_TYPE_KEYWORDS:
+        return products
+
+    keywords = ITEM_TYPE_KEYWORDS[item_type]
+    filtered = []
+
+    for product in products:
+        name_lower = product.get('name', '').lower()
+        if any(kw in name_lower for kw in keywords):
+            filtered.append(product)
+
+    return filtered if filtered else products  # Return original if nothing matches

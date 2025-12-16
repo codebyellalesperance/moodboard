@@ -37,6 +37,13 @@ function AppContent() {
         trend: data.trend,
         products: data.products
       })
+      // Pre-select item type filter if backend detected one
+      if (data.detected_item_type) {
+        setFilters(prev => ({
+          ...prev,
+          itemTypes: [data.detected_item_type]
+        }))
+      }
     } catch (err) {
       console.error('API Error:', err)
       setError(err.message || 'Analysis failed')
@@ -77,16 +84,16 @@ function AppContent() {
   // Results View
   if (results) {
     return (
-      <div className="min-h-screen p-4 md:p-8 relative">
+      <div className="min-h-screen p-3 sm:p-4 md:p-6 relative">
         <Header />
 
-        <main className="magazine-grid max-w-[1600px] mx-auto">
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 max-w-[1400px] mx-auto">
           {/* Main Editorial Content */}
-          <div className="col-span-12 lg:col-span-9 animate-fade-in pr-0 lg:pr-8">
-            <div className="flex justify-between items-end mb-8 border-b border-[var(--border-color)] pb-2">
-              <h2 className="font-serif text-4xl italic">Curated Selection</h2>
-              <div className="flex items-center gap-6 mb-1">
-                <span className="font-mono text-xs">{filteredProducts.length} ITEMS FOUND</span>
+          <div className="lg:col-span-9 animate-fade-in lg:pr-6">
+            <div className="flex justify-between items-end mb-4 sm:mb-6 border-b border-[var(--border-color)] pb-2">
+              <h2 className="font-serif text-2xl sm:text-3xl italic">Curated Selection</h2>
+              <div className="flex items-center gap-3 sm:gap-6 mb-1">
+                <span className="font-mono text-[10px] sm:text-xs">{filteredProducts.length} ITEMS</span>
                 <ProductFilters
                   products={results.products}
                   filters={filters}
@@ -98,7 +105,7 @@ function AppContent() {
             </div>
 
             {isReloadingFilter ? (
-              <div className="h-96 flex flex-col items-center justify-center border border-[var(--border-color)]">
+              <div className="h-64 flex flex-col items-center justify-center border border-[var(--border-color)]">
                 <div className="w-4 h-4 bg-[var(--color-text-primary)] animate-spin mb-4" />
                 <span className="font-mono text-xs tracking-widest uppercase">Curating new collection...</span>
               </div>
@@ -107,10 +114,10 @@ function AppContent() {
             )}
           </div>
 
-          {/* Sidebar / Info Column (Now on Right) */}
-          <div className="col-span-12 lg:col-span-3 space-y-12 animate-slide-up order-first lg:order-last">
-            <div className="sticky top-8">
-              <button onClick={handleStartOver} className="mb-8 flex items-center gap-2 text-xs font-mono uppercase tracking-widest hover:underline hover-invert px-4 py-2 border border-transparent hover:border-[var(--color-text-primary)] transition-all">
+          {/* Sidebar / Info Column */}
+          <div className="lg:col-span-3 space-y-6 sm:space-y-8 animate-slide-up order-first lg:order-last">
+            <div className="sticky top-4">
+              <button onClick={handleStartOver} className="mb-4 sm:mb-6 flex items-center gap-2 text-xs font-mono uppercase tracking-widest hover:underline hover-invert px-3 py-1.5 border border-transparent hover:border-[var(--color-text-primary)] transition-all">
                 <ArrowLeft className="w-3 h-3" /> Back to Edit
               </button>
 
@@ -124,21 +131,21 @@ function AppContent() {
 
   // Input View (Landing)
   return (
-    <div className="min-h-screen p-4 md:p-8 relative flex flex-col">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 lg:p-8 relative flex flex-col">
       {loading && <LoadingOverlay />}
       <Header />
 
-      <main className="flex-1 flex flex-col items-center justify-center relative max-w-[1400px] mx-auto w-full">
-        <div className="magazine-grid w-full items-center">
+      <main className="flex-1 flex flex-col items-center justify-center relative max-w-[1200px] mx-auto w-full py-4 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full items-center">
 
           {/* Left: Text & Prompt */}
-          <div className="col-span-12 lg:col-span-6 space-y-12 pr-0 lg:pr-12">
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10 order-2 lg:order-1">
             <div className="animate-slide-up">
-              <span className="font-mono text-xs tracking-[0.3em] uppercase opacity-70 mb-4 block">The AI Stylist</span>
-              <h2 className="font-serif text-6xl md:text-8xl leading-[0.9] mb-8">
-                Define <br /> Your <span className="italic">Style</span>
+              <span className="font-mono text-[10px] sm:text-xs tracking-[0.2em] sm:tracking-[0.3em] uppercase opacity-70 mb-2 sm:mb-3 block">The AI Stylist</span>
+              <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[0.9] mb-4 sm:mb-6">
+                Define <br className="hidden sm:block" /> Your <span className="italic">Style</span>
               </h2>
-              <p className="font-mono text-sm max-w-md border-l border-[var(--border-color)] pl-6 py-2 opacity-80">
+              <p className="font-mono text-xs sm:text-sm max-w-md border-l border-[var(--border-color)] pl-4 sm:pl-6 py-2 opacity-80">
                 Upload your inspiration or describe the vision. Our AI curates a high-fashion editorial just for you.
               </p>
             </div>
@@ -154,25 +161,25 @@ function AppContent() {
           </div>
 
           {/* Right: Upload & Actions */}
-          <div className="col-span-12 lg:col-span-6 mt-12 lg:mt-0 relative animate-slide-in-right">
+          <div className="relative animate-slide-in-right order-1 lg:order-2">
             <div className="relative z-10">
-              <div className="absolute -top-6 -left-6">
-                <Plus className="w-4 h-4 text-[var(--color-text-primary)] opacity-50" />
+              <div className="absolute -top-4 -left-4 sm:-top-6 sm:-left-6 hidden sm:block">
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--color-text-primary)] opacity-50" />
               </div>
-              <div className="absolute -bottom-6 -right-6">
-                <Plus className="w-4 h-4 text-[var(--color-text-primary)] opacity-50" />
+              <div className="absolute -bottom-4 -right-4 sm:-bottom-6 sm:-right-6 hidden sm:block">
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--color-text-primary)] opacity-50" />
               </div>
 
               <ImageUploader images={images} setImages={setImages} />
 
-              <div className="mt-8">
+              <div className="mt-4 sm:mt-6">
                 {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
                 <SubmitButton disabled={!canSubmit} onClick={handleSubmit} loading={loading} />
               </div>
             </div>
 
             {/* Decorative BG Grid */}
-            <div className="absolute inset-0 border border-[var(--border-color)] opacity-20 -z-10 translate-x-4 translate-y-4" />
+            <div className="absolute inset-0 border border-[var(--border-color)] opacity-20 -z-10 translate-x-2 translate-y-2 sm:translate-x-4 sm:translate-y-4 hidden sm:block" />
           </div>
         </div>
       </main>

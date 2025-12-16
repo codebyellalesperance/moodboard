@@ -12,7 +12,7 @@ Return a JSON object with EXACTLY these fields (no additional text, just JSON):
 {{
   "name": "A catchy 2-5 word aesthetic name (e.g., 'Coastal Grandmother', 'Old Money Tennis', '90s Minimalist', 'Dark Academia')",
 
-  "mood": "2-4 words describing the emotional energy (e.g., 'Effortless, polished, confident')",
+  "mood": "5-8 words describing the emotional energy (e.g., 'Effortless, polished, confident')",
 
   "color_palette": [
     {{"name": "Color name", "hex": "#HEXCODE"}},
@@ -32,14 +32,14 @@ Return a JSON object with EXACTLY these fields (no additional text, just JSON):
   "avoid": ["thing1", "thing2", "thing3"],
 
   "search_queries": [
-    "specific searchable product query 1",
-    "specific searchable product query 2",
-    "specific searchable product query 3",
-    "specific searchable product query 4",
-    "specific searchable product query 5",
-    "specific searchable product query 6",
-    "specific searchable product query 7",
-    "specific searchable product query 8"
+    "tops query (e.g., 'cream linen blouse women')",
+    "bottoms query (e.g., 'wide leg linen pants women')",
+    "dress or jumpsuit query",
+    "outerwear query (jacket, cardigan, blazer)",
+    "shoes query",
+    "bag or purse query",
+    "jewelry query",
+    "additional item query"
   ]
 }}
 
@@ -48,8 +48,9 @@ Important rules:
 - textures should have 4-6 items
 - key_pieces should have 5-7 items
 - avoid should have 3-5 items
-- search_queries should have 8-12 specific product searches
-- search_queries should be specific enough to find real products (e.g., "cream oversized linen blazer women" not just "blazer")
+- search_queries MUST have 8-10 queries covering DIFFERENT categories: tops, bottoms, dresses, outerwear, shoes, bags, jewelry, accessories
+- Each query should be specific and shoppable (e.g., "boho flowy maxi dress women" not just "dress")
+- Include style descriptors + product type + "women" or "men" in each query
 - If user mentioned budget constraints, include "affordable" or "under $X" in some queries
 - Return ONLY the JSON object, no markdown code blocks, no explanation
 """

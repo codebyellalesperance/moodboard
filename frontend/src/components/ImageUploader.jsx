@@ -31,10 +31,10 @@ function ImageUploader({ images, setImages }) {
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-2 opacity-70">
+        <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-center gap-2 mb-1 sm:mb-2 opacity-70">
                 <ImageIcon className="w-3 h-3 text-[var(--color-text-secondary)]" />
-                <span className="font-mono text-xs tracking-widest uppercase text-[var(--color-text-secondary)]">
+                <span className="font-mono text-[10px] sm:text-xs tracking-widest uppercase text-[var(--color-text-secondary)]">
                     Visual_Reference_Upload
                 </span>
             </div>
@@ -43,7 +43,7 @@ function ImageUploader({ images, setImages }) {
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
-                className="group relative cursor-pointer min-h-[200px] flex flex-col items-center justify-center
+                className="group relative cursor-pointer min-h-[140px] sm:min-h-[180px] flex flex-col items-center justify-center
                    border border-dashed border-[var(--border-color)] hover:border-[var(--color-text-primary)]
                    bg-[var(--bg-secondary)] hover:bg-[var(--bg-primary)]
                    transition-all duration-300"
@@ -63,13 +63,13 @@ function ImageUploader({ images, setImages }) {
                 <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-[var(--color-text-secondary)]" />
                 <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-[var(--color-text-secondary)]" />
 
-                <div className="flex flex-col items-center gap-4 group-hover:scale-105 transition-transform">
-                    <div className="p-3 border border-[var(--border-color)] rounded-full">
-                        <Upload className="w-5 h-5 text-[var(--color-text-primary)]" />
+                <div className="flex flex-col items-center gap-2 sm:gap-4 group-hover:scale-105 transition-transform">
+                    <div className="p-2 sm:p-3 border border-[var(--border-color)] rounded-full">
+                        <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--color-text-primary)]" />
                     </div>
                     <div className="text-center">
-                        <p className="font-serif italic text-lg text-[var(--color-text-primary)]">Drop files here</p>
-                        <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">
+                        <p className="font-serif italic text-base sm:text-lg text-[var(--color-text-primary)]">Drop files here</p>
+                        <p className="font-mono text-[9px] sm:text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)] mt-1">
                             or click to browse
                         </p>
                     </div>
@@ -77,7 +77,7 @@ function ImageUploader({ images, setImages }) {
             </div>
 
             {images.length > 0 && (
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                     {images.map((file, index) => (
                         <div
                             key={index}

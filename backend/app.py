@@ -2,11 +2,12 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from concurrent.futures import ThreadPoolExecutor
 from config import Config
 from utils.validation import validate_moodcheck_request
 from utils.logger import logger
 from services.vision import extract_mood
-from services.shopping import search_all_queries, detect_budget_from_prompt
+from services.shopping import search_all_queries, detect_budget_from_prompt, detect_item_type_from_prompt, filter_by_item_type
 from services.trends import get_trend_summary
 import time
 
@@ -109,37 +110,81 @@ def moodcheck():
             'error': 'Unable to analyze images. Please try again.'
         }), 500
 
-    # Step 3: Search for products
-    try:
-        logger.info("Searching Google Shopping...")
-        shopping_start = time.time()
-        search_queries = mood_profile.get('search_queries', [])
-        budget = detect_budget_from_prompt(prompt)
-        products = search_all_queries(
-            search_queries,
-            max_products=max_products,
-            budget=budget,
-            vibe_profile=mood_profile
-        )
-        shopping_time = time.time() - shopping_start
-        logger.info(f"Shopping completed in {shopping_time:.2f}s - Found {len(products)} products")
-    except Exception as e:
-        logger.error(f"Shopping API error: {e}")
-        products = []
-
-    # Step 4: Get trend data for the vibe
-    trend = None
+    # Step 3 & 4: Search for products AND fetch trend data in parallel
+    search_queries = mood_profile.get('search_queries', [])
+    budget = detect_budget_from_prompt(prompt)
+    item_type = detect_item_type_from_prompt(prompt)
     vibe_name = mood_profile.get('name', '')
-    if vibe_name:
+
+    # If specific item type detected, modify queries to focus on it
+    if item_type:
+        logger.info(f"Detected item type: {item_type} - modifying search queries")
+        # Extract the specific item word from prompt (e.g., "boots" from "boho boots")
+        item_word = None
+        prompt_lower = prompt.lower()
+        from services.shopping import ITEM_TYPE_KEYWORDS
+        for keyword in ITEM_TYPE_KEYWORDS.get(item_type, []):
+            if keyword in prompt_lower:
+                item_word = keyword
+                break
+
+        # Create item-specific queries using the vibe name
+        if item_word and vibe_name:
+            search_queries = [
+                f"{vibe_name} {item_word} women",
+                f"{item_word} {vibe_name} style",
+                f"womens {item_word} {mood_profile.get('mood', '')}",
+                f"{item_word} {' '.join(mood_profile.get('textures', [])[:2])}",
+                f"trendy {item_word} {vibe_name}",
+                f"{item_word} outfit {vibe_name}",
+            ]
+            logger.info(f"Modified queries: {search_queries}")
+
+    products = []
+    trend = None
+
+    def fetch_products():
+        try:
+            logger.info("Searching Google Shopping...")
+            start = time.time()
+            result = search_all_queries(
+                search_queries,
+                max_products=max_products,
+                budget=budget,
+                vibe_profile=mood_profile
+            )
+            logger.info(f"Shopping completed in {time.time() - start:.2f}s - Found {len(result)} products")
+            return result
+        except Exception as e:
+            logger.error(f"Shopping API error: {e}")
+            return []
+
+    def fetch_trend():
+        if not vibe_name:
+            return None
         try:
             logger.info(f"Fetching trend data for '{vibe_name}'...")
-            trend_start = time.time()
-            trend = get_trend_summary(vibe_name)
-            trend_time = time.time() - trend_start
-            logger.info(f"Trend data fetched in {trend_time:.2f}s - Direction: {trend.get('direction')}")
+            start = time.time()
+            result = get_trend_summary(vibe_name)
+            logger.info(f"Trend data fetched in {time.time() - start:.2f}s")
+            return result
         except Exception as e:
             logger.error(f"Trend API error: {e}")
-            trend = None
+            return None
+
+    # Run both in parallel
+    parallel_start = time.time()
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        products_future = executor.submit(fetch_products)
+        trend_future = executor.submit(fetch_trend)
+        products = products_future.result()
+        trend = trend_future.result()
+    logger.info(f"Parallel fetch completed in {time.time() - parallel_start:.2f}s")
+
+    # Filter by item type if detected
+    if item_type:
+        products = filter_by_item_type(products, item_type)
+        logger.info(f"Filtered to {len(products)} {item_type} items")
 
     # Step 5: Build response
     response = {
@@ -154,7 +199,8 @@ def moodcheck():
         },
         'trend': trend,
         'products': products,
-        'search_queries_used': search_queries[:8]
+        'search_queries_used': search_queries[:8],
+        'detected_item_type': item_type  # Frontend can use this to pre-select filter
     }
 
     total_time = time.time() - start_time

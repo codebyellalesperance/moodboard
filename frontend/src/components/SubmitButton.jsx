@@ -6,7 +6,7 @@ function SubmitButton({ disabled, onClick, loading }) {
             onClick={onClick}
             disabled={disabled || loading}
             className={`
-                w-full py-4 text-sm font-mono tracking-[0.2em] uppercase
+                w-full py-3 sm:py-4 text-xs sm:text-sm font-mono tracking-[0.15em] sm:tracking-[0.2em] uppercase
                 transition-all duration-300 relative group border
                 ${disabled
                     ? 'border-[var(--border-color)] text-[var(--color-text-secondary)] cursor-not-allowed opacity-50'
@@ -14,17 +14,17 @@ function SubmitButton({ disabled, onClick, loading }) {
                 }
             `}
         >
-            <div className="relative z-10 flex items-center justify-center gap-3">
+            <div className="relative z-10 flex items-center justify-center gap-2 sm:gap-3">
                 {loading ? (
                     <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Processing_Data...</span>
+                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                        <span>Processing...</span>
                     </>
                 ) : (
                     <>
                         <span>Initialize_Search</span>
                         {!disabled && (
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                         )}
                     </>
                 )}

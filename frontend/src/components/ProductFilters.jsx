@@ -10,6 +10,17 @@ const PRICE_RANGES = [
     { label: '$200+', min: 200, max: Infinity }
 ]
 
+const ITEM_TYPES = [
+    { label: 'Tops', keywords: ['top', 'blouse', 'shirt', 'tee', 't-shirt', 'tank', 'sweater', 'hoodie', 'cardigan', 'pullover', 'cami', 'bodysuit'] },
+    { label: 'Bottoms', keywords: ['pants', 'jeans', 'trousers', 'shorts', 'skirt', 'leggings'] },
+    { label: 'Dresses', keywords: ['dress', 'gown', 'romper', 'jumpsuit', 'maxi', 'midi', 'mini dress'] },
+    { label: 'Outerwear', keywords: ['jacket', 'coat', 'blazer', 'cardigan', 'vest', 'parka', 'puffer', 'trench'] },
+    { label: 'Shoes', keywords: ['shoe', 'boot', 'sneaker', 'sandal', 'heel', 'flat', 'loafer', 'mule', 'slipper'] },
+    { label: 'Bags', keywords: ['bag', 'purse', 'tote', 'clutch', 'backpack', 'crossbody', 'handbag', 'satchel'] },
+    { label: 'Jewelry', keywords: ['necklace', 'earring', 'bracelet', 'ring', 'jewelry', 'chain', 'pendant'] },
+    { label: 'Accessories', keywords: ['scarf', 'hat', 'belt', 'sunglasses', 'watch', 'hair', 'headband'] }
+]
+
 function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isReloading }) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -31,6 +42,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
 
     const activeFilterCount = [
         filters.priceRange?.label !== 'All Prices',
+        filters.itemTypes?.length > 0,
         filters.categories?.length > 0,
         filters.brands?.length > 0,
         filters.retailers?.length > 0,
@@ -40,6 +52,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
     const clearFilters = () => {
         setFilters({
             priceRange: PRICE_RANGES[0],
+            itemTypes: [],
             categories: [],
             brands: [],
             retailers: [],
@@ -72,9 +85,17 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                 <ChevronDown className={`w-4 h-4 theme-text-tertiary transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
+            {/* Dark Backdrop */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                    onClick={() => setIsOpen(false)}
+                />
+            )}
+
             {/* Filter Panel */}
             {isOpen && (
-                <div className="absolute top-full right-0 mt-2 w-80 glass-card rounded-2xl p-4 space-y-4 z-50 animate-scale-in">
+                <div className="absolute top-full right-0 mt-2 w-80 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-2xl p-4 space-y-4 z-50 animate-scale-in shadow-2xl">
                     {/* Header */}
                     <div className="flex items-center justify-between pb-2 border-b border-[var(--glass-border)]">
                         <span className="text-sm font-medium theme-text-primary">Filter Results</span>
@@ -88,6 +109,25 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                         )}
                     </div>
 
+                    {/* Item Type */}
+                    <div className="space-y-2">
+                        <p className="text-xs font-medium theme-text-secondary uppercase tracking-wide">Item Type</p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {ITEM_TYPES.map((type) => (
+                                <button
+                                    key={type.label}
+                                    onClick={() => toggleArrayFilter('itemTypes', type.label)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.itemTypes?.includes(type.label)
+                                            ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
+                                            : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border border-[var(--border-color)]'
+                                        }`}
+                                >
+                                    {type.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Price Range */}
                     <div className="space-y-2">
                         <p className="text-xs font-medium theme-text-secondary uppercase tracking-wide">Price</p>
@@ -98,7 +138,7 @@ function ProductFilters({ products, filters, setFilters, onReloadWithFilter, isR
                                     onClick={() => setFilters({ ...filters, priceRange: range })}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${filters.priceRange?.label === range.label
                                             ? 'bg-[var(--accent)] text-[var(--bg-primary)]'
-                                            : 'glass hover:bg-[var(--glass-bg-hover)] theme-text-primary'
+                                            : 'bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-hover)] theme-text-primary border border-[var(--border-color)]'
                                         }`}
                                 >
                                     {range.label}
@@ -207,6 +247,13 @@ export function filterProducts(products, filters) {
     if (!products) return []
 
     return products.filter(product => {
+        // Item type filter
+        if (filters.itemTypes?.length > 0) {
+            const productName = product.name || ''
+            const matchesAny = filters.itemTypes.some(type => matchesItemType(productName, type))
+            if (!matchesAny) return false
+        }
+
         // Price filter
         if (filters.priceRange && filters.priceRange.label !== 'All Prices') {
             const price = product.price || 0
@@ -245,8 +292,17 @@ export function filterProducts(products, filters) {
     })
 }
 
+// Helper to check if product matches item type
+function matchesItemType(productName, itemTypeLabel) {
+    const itemType = ITEM_TYPES.find(t => t.label === itemTypeLabel)
+    if (!itemType) return false
+    const nameLower = productName.toLowerCase()
+    return itemType.keywords.some(keyword => nameLower.includes(keyword))
+}
+
 export const DEFAULT_FILTERS = {
     priceRange: PRICE_RANGES[0],
+    itemTypes: [],
     categories: [],
     brands: [],
     retailers: [],
