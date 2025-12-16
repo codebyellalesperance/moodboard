@@ -2,7 +2,6 @@ import requests
 import logging
 from typing import List, Dict, Optional
 from config import Config
-from utils.image_validator import filter_valid_products
 
 logger = logging.getLogger(__name__)
 
@@ -163,10 +162,10 @@ def search_all_queries(
             logger.error(f"Error searching '{query}': {e}")
             continue
 
-    # Validate images (filter out broken/invalid URLs)
-    logger.info(f"Validating {len(all_products)} product images...")
-    validated_products = filter_valid_products(all_products)
-    logger.info(f"Valid images: {len(validated_products)}/{len(all_products)}")
+    # Skip image validation - ShopStyle images are generally reliable
+    # and many CDNs block HEAD requests causing false negatives
+    validated_products = all_products
+    logger.info(f"Fetched {len(validated_products)} products")
 
     # Sort: in-stock first, then sale items, then by price
     validated_products.sort(key=lambda x: (

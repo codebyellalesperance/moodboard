@@ -56,13 +56,13 @@ function AppContent() {
   const [isReloadingFilter, setIsReloadingFilter] = useState(false)
 
   const handleReloadWithFilter = async (category, retailer) => {
-    if (!results?.vibe?.name) return
+    if (!results?.mood?.name) return
 
     setIsReloadingFilter(true)
     try {
       const filterPrompt = category
-        ? `${results.vibe.name} style ${category.toLowerCase()}`
-        : `${results.vibe.name} from ${retailer}`
+        ? `${results.mood.name} style ${category.toLowerCase()}`
+        : `${results.mood.name} from ${retailer}`
 
       const data = await getMoodcheck([], filterPrompt, { maxProducts: 30 })
       setResults(prev => ({ ...prev, products: data.products }))
