@@ -865,7 +865,8 @@ def ensure_category_diversity(
     Returns:
         Diversified list of products
     """
-    if len(products) <= max_products:
+    # Only skip diversity if we have very few products
+    if len(products) < 5:
         return products
 
     # Group by category
