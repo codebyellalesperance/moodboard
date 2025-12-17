@@ -92,6 +92,11 @@ EDITORIAL_BRANDS = {
         "aspirational": ["Zimmermann", "Valentino", "Giambattista Valli", "Rodarte", "Oscar de la Renta"],
         "contemporary": ["Self-Portrait", "Needle & Thread", "LoveShackFancy", "Reformation", "Veronica Beard"],
         "trending": ["Selkie", "Hill House Home", "Sister Jane", "Batsheva", "Markarian"]
+    },
+    "tropical": {
+        "aspirational": ["Zimmermann", "Johanna Ortiz", "Adriana Degreas", "Agua by Agua Bendita", "Cult Gaia"],
+        "contemporary": ["Farm Rio", "Solid & Striped", "Faithfull the Brand", "Mara Hoffman", "Miguelina"],
+        "trending": ["Hunza G", "Frankies Bikinis", "Montce", "Vitamin A", "Agua Bendita"]
     }
 }
 
