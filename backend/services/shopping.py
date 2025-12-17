@@ -466,9 +466,20 @@ def search_all_queries(
         trusted_products = rerank_products_with_ai(trusted_products, vibe_profile)
         logger.info(f"After AI re-ranking: {len(trusted_products)} products")
 
+    # QUALITY GATE: Only keep products that actually match the vibe (score >= 6)
+    # This prevents low-quality products from being included just to fill categories
+    MIN_VIBE_SCORE = 6
+    quality_products = [p for p in trusted_products if p.get("vibe_score", 0) >= MIN_VIBE_SCORE]
+    logger.info(f"After quality filter (score >= {MIN_VIBE_SCORE}): {len(quality_products)} products")
+
+    # If we filtered too aggressively, relax to score >= 5
+    if len(quality_products) < 10:
+        quality_products = [p for p in trusted_products if p.get("vibe_score", 0) >= 5]
+        logger.info(f"Relaxed to score >= 5: {len(quality_products)} products")
+
     # Sort: by vibe score (highest first), then brand query boost, then brand score, then on-sale, then by price
-    trusted_products.sort(key=lambda x: (
-        -x.get("vibe_score", 5),          # Higher vibe scores first
+    quality_products.sort(key=lambda x: (
+        -x.get("vibe_score", 0),          # Higher vibe scores first (default 0, not 5!)
         -int(x.get("from_brand_query", False)),  # Products from target brand queries
         -x.get("brand_score", 0),         # Higher brand scores third
         not x.get("on_sale", False),      # Sale items fourth
@@ -476,20 +487,22 @@ def search_all_queries(
     ))
 
     # Apply category diversity to ensure mix of tops, bottoms, shoes, accessories, etc.
+    # Now only working with products that actually match the vibe
     diversified = ensure_category_diversity(
-        trusted_products,
+        quality_products,
         max_products=max_products,
         min_per_category=1,  # Try to include at least 1 from each category
-        max_per_category=4   # Don't let any single category dominate
+        max_per_category=5   # Allow slightly more per category since we have fewer total
     )
     logger.info(f"After diversity filter: {len(diversified)} products")
 
     # Build bench of alternative products for coherence swaps
+    # Use quality_products (already filtered) not trusted_products
     diversified_ids = {p.get('id', '') + p.get('product_url', '') for p in diversified}
     bench_products = [
-        p for p in trusted_products
+        p for p in quality_products
         if (p.get('id', '') + p.get('product_url', '')) not in diversified_ids
-        and p.get('vibe_score', 0) >= 5  # Only consider decent alternatives
+        and p.get('vibe_score', 0) >= MIN_VIBE_SCORE  # Same quality threshold
     ][:15]  # Keep top 15 alternatives
 
     # Apply outfit coherence scoring if we have a vibe profile
@@ -617,13 +630,16 @@ Product details for context:
                 score_map[idx] = item["score"]
 
         # Apply scores to visually analyzed products
+        # Be stricter: only keep products that genuinely match (7+)
         scored_products = []
         for i, product in enumerate(products_for_visual):
-            score = score_map.get(i, 5)
-            if score >= 6:  # Raised threshold for better quality
+            score = score_map.get(i, 0)  # Default to 0, not 5
+            if score >= 6:
                 product["vibe_score"] = score
                 product["visual_scored"] = True
                 scored_products.append(product)
+            else:
+                logger.debug(f"Rejected product (score {score}): {product.get('name', '')[:40]}")
 
         logger.info(f"Visual re-ranking: {len(scored_products)}/{len(products_for_visual)} products scored 6+")
 
@@ -635,11 +651,10 @@ Product details for context:
         # Sort by score descending
         scored_products.sort(key=lambda x: x.get("vibe_score", 0), reverse=True)
 
-        # Add back any remaining unscored products at the end (31+)
+        # Don't include unscored products (31+) - they haven't been validated
+        # If we need more products, the caller should request more queries
         if len(products) > 30:
-            for p in products[30:]:
-                p["vibe_score"] = 4  # Default low score for unanalyzed
-            scored_products.extend(products[30:])
+            logger.info(f"Skipping {len(products) - 30} unanalyzed products")
 
         return scored_products
 
@@ -694,20 +709,19 @@ Score 1-10. Return ONLY JSON: [{{"index": 0, "score": 7}}]"""
 
         scored = []
         for i, product in enumerate(products):
-            score = score_map.get(i, 5)
+            score = score_map.get(i, 0)  # Default to 0, not 5
             if score >= 6:
                 product["vibe_score"] = score
                 product["visual_scored"] = False
                 scored.append(product)
 
+        logger.info(f"Text-only re-ranking: {len(scored)}/{len(products)} products scored 6+")
         return scored
 
     except Exception as e:
         logger.error(f"Text-only re-ranking failed: {e}")
-        # Return products with default score
-        for p in products:
-            p["vibe_score"] = 5
-        return products
+        # Don't return unscored products - they haven't been validated
+        return []
 
 
 def score_outfit_coherence(
