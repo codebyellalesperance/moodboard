@@ -197,7 +197,6 @@ Return a JSON object with EXACTLY these fields (no additional text, just JSON):
     "aspirational": ["Luxury/designer brand featured in Vogue editorials", "Another fashion house that defines this aesthetic"],
     "contemporary": ["Fashion-forward mid-range brand seen on influencers", "Another editorial-approved contemporary brand"],
     "trending": ["TikTok/Instagram viral brand that's having a moment", "Another emerging designer or cult favorite"],
-    "accessible": ["Stylish budget option that doesn't look cheap", "Another affordable brand with good design"]
   }},
 
   "search_queries": [
@@ -238,7 +237,6 @@ BRAND QUALITY STANDARDS (CRITICAL):
   - Aspirational: Brands featured in Vogue, Harper's Bazaar, worn by celebrities (The Row, Khaite, Toteme, Zimmermann, Isabel Marant)
   - Contemporary: Instagram/influencer favorites with strong design DNA (Reformation, Aritzia, COS, Anine Bing, Sézane, Réalisation Par)
   - Trending: TikTok viral brands, emerging designers, cult favorites (Frankie Shop, Mirror Palais, Posse, Sir The Label, Cult Gaia)
-  - Accessible: Budget brands that still look elevated, NOT fast fashion basics (& Other Stories, Arket, Abercrombie's elevated line, Mango)
 - AVOID suggesting: Shein, Romwe, Fashion Nova, generic Amazon brands, or anything that looks cheap
 - Include at least 2 brand-specific search queries (e.g., "Reformation midi dress", "COS wool coat")
 
@@ -377,7 +375,6 @@ def extract_mood(images: list, prompt: str = "") -> dict:
             'aspirational': [],
             'contemporary': [],
             'trending': [],
-            'accessible': []
         }
     elif 'trending' not in mood_profile['target_brands']:
         # Add trending tier if missing from response
