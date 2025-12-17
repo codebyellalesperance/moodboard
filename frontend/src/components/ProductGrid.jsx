@@ -1,7 +1,7 @@
 import ProductCard from './ProductCard'
-import { ChevronDown, Shuffle } from 'lucide-react'
+import { ChevronDown, Shuffle, Loader2 } from 'lucide-react'
 
-function ProductGrid({ products, displayedCount = 20, onLoadMore, onShuffle }) {
+function ProductGrid({ products, displayedCount = 20, onLoadMore, onShuffle, isLoadingMore = false }) {
     if (!products?.length) return null
 
     const visibleProducts = products.slice(0, displayedCount)
@@ -29,15 +29,25 @@ function ProductGrid({ products, displayedCount = 20, onLoadMore, onShuffle }) {
                 ))}
             </div>
 
-            {hasMore && onLoadMore && (
+            {onLoadMore && (
                 <div className="flex justify-center pt-4 border-t border-[var(--border-color)]">
                     <button
                         onClick={onLoadMore}
-                        className="group flex items-center gap-3 px-8 py-3 border border-[var(--color-text-primary)] font-mono text-xs tracking-widest uppercase hover:bg-[var(--color-text-primary)] hover:text-[var(--color-bg)] transition-all duration-300"
+                        disabled={isLoadingMore}
+                        className="group flex items-center gap-3 px-8 py-3 border border-[var(--color-text-primary)] font-mono text-xs tracking-widest uppercase hover:bg-[var(--color-text-primary)] hover:text-[var(--color-bg)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-inherit"
                     >
-                        <span>Load More</span>
-                        <span className="opacity-60">({Math.min(20, remainingCount)} more)</span>
-                        <ChevronDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                        {isLoadingMore ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Curating More...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>Load More</span>
+                                {hasMore && <span className="opacity-60">({Math.min(20, remainingCount)} cached)</span>}
+                                <ChevronDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                            </>
+                        )}
                     </button>
                 </div>
             )}

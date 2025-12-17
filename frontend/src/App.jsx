@@ -9,7 +9,7 @@ import ProductGrid from './components/ProductGrid'
 import ProductFilters, { filterProducts, DEFAULT_FILTERS } from './components/ProductFilters'
 import LoadingOverlay from './components/LoadingOverlay'
 import ErrorMessage from './components/ErrorMessage'
-import { getMoodcheck } from './utils/api'
+import { getMoodcheck, getMoreProducts } from './utils/api'
 import { ArrowLeft, Plus } from 'lucide-react'
 
 function AppContent() {
@@ -68,8 +68,33 @@ function AppContent() {
     setDisplayedCount(20)
   }
 
-  const handleLoadMore = () => {
-    setDisplayedCount(prev => prev + 20)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  const handleLoadMore = async () => {
+    if (isLoadingMore || !results?.mood) return
+
+    setIsLoadingMore(true)
+    try {
+      // Get IDs of existing products to exclude
+      const existingIds = results.products.map(p => p.id + (p.product_url || ''))
+
+      // Fetch new products
+      const newProducts = await getMoreProducts(results.mood, existingIds)
+
+      if (newProducts && newProducts.length > 0) {
+        // Append new products to existing ones
+        setResults(prev => ({
+          ...prev,
+          products: [...prev.products, ...newProducts]
+        }))
+        // Show the new products
+        setDisplayedCount(prev => prev + newProducts.length)
+      }
+    } catch (err) {
+      console.error('Load more error:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
   }
 
   const handleShuffle = () => {
@@ -140,6 +165,7 @@ function AppContent() {
                 displayedCount={displayedCount}
                 onLoadMore={handleLoadMore}
                 onShuffle={handleShuffle}
+                isLoadingMore={isLoadingMore}
               />
             )}
           </div>

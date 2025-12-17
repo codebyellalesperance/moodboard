@@ -211,6 +211,137 @@ def moodcheck():
     return jsonify(response), 200
 
 
+# Aesthetic-specific signature accessories
+AESTHETIC_ACCESSORIES = {
+    "western": ["cowboy boots women", "western belt women", "turquoise jewelry", "fringe bag", "cowgirl hat"],
+    "coastal": ["swimsuit women", "bikini set", "beach cover up", "straw tote bag", "espadrilles women"],
+    "tropical": ["swimsuit women", "bikini set", "sarong wrap", "raffia bag", "platform sandals"],
+    "beach": ["swimsuit women", "bikini set", "beach dress", "woven tote", "slide sandals"],
+    "boho": ["fringe boots women", "layered necklaces", "wide brim hat", "embroidered bag", "ankle boots suede"],
+    "bohemian": ["fringe boots women", "statement earrings", "floppy hat", "crossbody bag leather", "gladiator sandals"],
+    "minimalist": ["structured tote bag", "simple gold jewelry", "white sneakers women", "leather belt slim", "watch women minimal"],
+    "quiet luxury": ["cashmere scarf", "leather loafers women", "gold hoops small", "structured handbag", "ballet flats leather"],
+    "parisian": ["ballet flats women", "silk scarf", "structured handbag", "gold jewelry classic", "kitten heels"],
+    "athleisure": ["running sneakers women", "gym bag", "sports bra", "leggings high waist", "baseball cap"],
+    "glamorous": ["statement earrings", "clutch bag evening", "strappy heels", "sparkle jewelry", "evening bag"],
+    "mob wife": ["fur coat women", "gold chunky jewelry", "designer sunglasses", "leopard print heels", "statement handbag"],
+    "cottagecore": ["mary jane shoes", "wicker basket bag", "pearl jewelry", "floral headband", "lace socks"],
+    "scandinavian": ["minimalist watch", "leather backpack", "wool scarf", "white sneakers clean", "structured bag"],
+    "corporate": ["structured tote leather", "pointed toe heels", "pearl earrings", "silk blouse", "watch classic women"],
+    "old money": ["loafers leather women", "pearl necklace", "silk scarf", "tennis bracelet", "ballet flats"],
+    "coquette": ["ballet flats bow", "ribbon hair accessories", "pearl jewelry", "mini bag", "mary janes"],
+    "dark academia": ["oxford shoes women", "leather satchel", "vintage watch", "gold rimmed glasses", "wool beret"],
+    "grunge": ["combat boots women", "choker necklace", "crossbody bag chain", "silver rings", "platform boots"],
+    "vintage": ["cat eye sunglasses", "pearl earrings", "structured handbag", "heels kitten", "silk scarf vintage"],
+    "streetwear": ["chunky sneakers", "bucket hat", "crossbody bag", "baseball cap", "platform sneakers"],
+}
+
+
+@app.route('/api/more-products', methods=['POST'])
+@limiter.limit("20 per minute")
+def more_products():
+    """
+    Fetch more products for an existing vibe profile.
+    Uses different search query variations to get fresh results.
+
+    Request body:
+        - vibe_profile: the mood profile object from initial request
+        - exclude_ids: array of product IDs to exclude (already shown)
+        - max_products: number of products to return (default 20)
+
+    Response:
+        - success: boolean
+        - products: array of new product objects
+    """
+    start_time = time.time()
+
+    data = request.get_json()
+    if not data or 'vibe_profile' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Missing vibe_profile'
+        }), 400
+
+    vibe_profile = data['vibe_profile']
+    exclude_ids = set(data.get('exclude_ids', []))
+    max_products = min(data.get('max_products', 20), 30)
+
+    logger.info(f"More products request for '{vibe_profile.get('name', 'Unknown')}', excluding {len(exclude_ids)} items")
+
+    # Generate alternative search queries to get fresh results
+    vibe_name = vibe_profile.get('name', '')
+    key_pieces = vibe_profile.get('key_pieces', [])
+    textures = vibe_profile.get('textures', [])
+    color_palette = vibe_profile.get('color_palette', [])
+
+    # Create varied queries using different combinations
+    alt_queries = []
+
+    # Add aesthetic-specific accessories first (signature items for the vibe)
+    vibe_lower = vibe_name.lower()
+    for aesthetic_key, accessories in AESTHETIC_ACCESSORIES.items():
+        if aesthetic_key in vibe_lower:
+            for accessory in accessories[:3]:  # Top 3 signature accessories
+                alt_queries.append(f"{accessory} {vibe_name}")
+            logger.info(f"Added {aesthetic_key} accessories: {accessories[:3]}")
+            break
+
+    # Use key pieces with vibe name
+    for piece in key_pieces[:4]:
+        alt_queries.append(f"{piece} {vibe_name} style women")
+
+    # Use textures
+    for texture in textures[:2]:
+        alt_queries.append(f"{texture} {vibe_name} clothing women")
+
+    # Use colors
+    for color in color_palette[:2]:
+        color_name = color.get('name', '') if isinstance(color, dict) else color
+        if color_name:
+            alt_queries.append(f"{color_name} {vibe_name} fashion women")
+
+    # Add some general style queries
+    alt_queries.extend([
+        f"{vibe_name} outfit ideas women",
+        f"{vibe_name} wardrobe essentials",
+        f"trending {vibe_name} fashion"
+    ])
+
+    logger.info(f"Alternative queries: {alt_queries[:6]}")
+
+    try:
+        # Search with alternative queries
+        products = search_all_queries(
+            alt_queries[:8],
+            max_products=max_products + len(exclude_ids),  # Get extra to account for exclusions
+            budget=None,
+            vibe_profile=vibe_profile
+        )
+
+        # Filter out already-shown products
+        fresh_products = []
+        for p in products:
+            product_id = p.get('id', '') + p.get('product_url', '')
+            if product_id not in exclude_ids:
+                fresh_products.append(p)
+                if len(fresh_products) >= max_products:
+                    break
+
+        logger.info(f"More products completed in {time.time() - start_time:.2f}s - Found {len(fresh_products)} new products")
+
+        return jsonify({
+            'success': True,
+            'products': fresh_products
+        }), 200
+
+    except Exception as e:
+        logger.error(f"More products error: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to fetch more products'
+        }), 500
+
+
 @app.errorhandler(500)
 def internal_error(error):
     logger.error(f"Internal server error: {error}")
