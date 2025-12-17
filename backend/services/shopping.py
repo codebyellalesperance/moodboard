@@ -252,6 +252,59 @@ def create_brand_queries(
     return brand_queries
 
 
+def create_color_queries(
+    color_palette: List[Dict],
+    key_pieces: List[str],
+    search_queries: List[str]
+) -> List[str]:
+    """
+    Create color-specific search queries based on the extracted color palette.
+
+    Args:
+        color_palette: List of color dicts with 'name' and 'hex' keys
+        key_pieces: List of key pieces from the vibe profile
+        search_queries: Original search queries to enhance with colors
+
+    Returns:
+        List of color-enhanced search queries
+    """
+    if not color_palette:
+        return []
+
+    color_queries = []
+
+    # Get primary colors (first 3 from palette)
+    primary_colors = [c.get('name', '').lower() for c in color_palette[:3] if c.get('name')]
+
+    if not primary_colors:
+        return []
+
+    # Strategy 1: Add primary color to key pieces
+    # e.g., "cream oversized blazer women", "navy wide leg pants women"
+    for i, piece in enumerate(key_pieces[:3]):
+        if i < len(primary_colors):
+            color = primary_colors[i]
+            # Avoid redundancy if color is already in the piece
+            if color not in piece.lower():
+                color_queries.append(f"{color} {piece} women")
+
+    # Strategy 2: Create color + category queries for wardrobe staples
+    staple_categories = ["blouse", "pants", "dress", "sweater", "bag"]
+    for i, category in enumerate(staple_categories[:len(primary_colors)]):
+        color = primary_colors[i % len(primary_colors)]
+        color_queries.append(f"{color} {category} women")
+
+    # Strategy 3: Enhance some original queries with the dominant color
+    dominant_color = primary_colors[0] if primary_colors else None
+    if dominant_color:
+        for query in search_queries[:2]:
+            # Only add color if not already present
+            if dominant_color not in query.lower():
+                color_queries.append(f"{dominant_color} {query}")
+
+    return color_queries
+
+
 def search_all_queries(
     search_queries: List[str],
     max_products: int = 20,
@@ -275,20 +328,28 @@ def search_all_queries(
     elif budget == "luxury":
         min_price = 150
 
-    # Build query list: enhanced base queries + brand-specific queries
-    base_queries = enhance_queries_with_modifiers(search_queries[:5])
+    # Build query list: enhanced base queries + brand-specific + color-specific queries
+    base_queries = enhance_queries_with_modifiers(search_queries[:4])
 
     # Add brand-specific queries if we have target brands
     brand_queries = []
+    color_queries = []
     if vibe_profile:
         target_brands = vibe_profile.get('target_brands', {})
         key_pieces = vibe_profile.get('key_pieces', [])
+        color_palette = vibe_profile.get('color_palette', [])
+
         if target_brands:
             brand_queries = create_brand_queries(target_brands, key_pieces, budget)
             logger.info(f"Brand queries: {brand_queries}")
 
-    # Combine: 5 base queries + up to 4 brand queries = max 9 parallel searches
-    queries_to_use = base_queries + brand_queries[:4]
+        # Add color-specific queries
+        if color_palette:
+            color_queries = create_color_queries(color_palette, key_pieces, search_queries)
+            logger.info(f"Color queries: {color_queries}")
+
+    # Combine: 4 base + 3 brand + 3 color = 10 parallel searches
+    queries_to_use = base_queries + brand_queries[:3] + color_queries[:3]
     logger.info(f"Total queries ({len(queries_to_use)}): {queries_to_use}")
     products_per_query = 10  # Get 10 products per query
 
@@ -305,7 +366,7 @@ def search_all_queries(
             logger.error(f"Error searching '{query}': {e}")
             return []
 
-    with ThreadPoolExecutor(max_workers=9) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(fetch_query, q): q for q in queries_to_use}
         for future in as_completed(futures):
             query = futures[future]
