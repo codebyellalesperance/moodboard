@@ -1,7 +1,7 @@
 import ProductCard from './ProductCard'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Shuffle } from 'lucide-react'
 
-function ProductGrid({ products, displayedCount = 20, onLoadMore }) {
+function ProductGrid({ products, displayedCount = 20, onLoadMore, onShuffle }) {
     if (!products?.length) return null
 
     const visibleProducts = products.slice(0, displayedCount)
@@ -10,9 +10,22 @@ function ProductGrid({ products, displayedCount = 20, onLoadMore }) {
 
     return (
         <div className="space-y-8">
+            {/* Shuffle Button */}
+            {onShuffle && products.length > 1 && (
+                <div className="flex justify-end">
+                    <button
+                        onClick={onShuffle}
+                        className="group flex items-center gap-2 px-4 py-2 border border-[var(--border-color)] font-mono text-[10px] tracking-widest uppercase hover:border-[var(--color-text-primary)] hover:bg-[var(--color-text-primary)] hover:text-[var(--color-bg)] transition-all duration-300"
+                    >
+                        <Shuffle className="w-3 h-3 group-hover:rotate-180 transition-transform duration-500" />
+                        <span>Shuffle</span>
+                    </button>
+                </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {visibleProducts.map((product, index) => (
-                    <ProductCard key={product.product_url || index} product={product} index={index} />
+                    <ProductCard key={`${product.product_url}-${index}`} product={product} index={index} />
                 ))}
             </div>
 

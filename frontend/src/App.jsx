@@ -72,6 +72,18 @@ function AppContent() {
     setDisplayedCount(prev => prev + 20)
   }
 
+  const handleShuffle = () => {
+    if (!results?.products) return
+    // Fisher-Yates shuffle algorithm
+    const shuffled = [...results.products]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    setResults(prev => ({ ...prev, products: shuffled }))
+    setDisplayedCount(20) // Reset to first page after shuffle
+  }
+
   const [isReloadingFilter, setIsReloadingFilter] = useState(false)
 
   const handleReloadWithFilter = async (category, retailer) => {
@@ -127,6 +139,7 @@ function AppContent() {
                 products={filteredProducts}
                 displayedCount={displayedCount}
                 onLoadMore={handleLoadMore}
+                onShuffle={handleShuffle}
               />
             )}
           </div>

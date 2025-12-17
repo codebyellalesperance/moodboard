@@ -365,7 +365,8 @@ def search_all_queries(
     Now includes brand-specific queries from the vibe profile.
     """
     all_products = []
-    seen_ids = set()
+    seen_ids = set()  # Track by product_key (id + url)
+    seen_products = set()  # Track by normalized name + brand + price to catch duplicates
 
     # Set price filters based on budget
     min_price, max_price = None, None
@@ -427,14 +428,27 @@ def search_all_queries(
                     continue
 
                 product_key = product["id"] + product.get("product_url", "")
-                if product_key not in seen_ids:
-                    seen_ids.add(product_key)
-                    # Add brand score for curated/editorial/trending brand boosting
-                    product["brand_score"] = get_brand_score(product.get("brand", ""))
-                    # Mark products from brand queries for potential boost
-                    if is_brand_query:
-                        product["from_brand_query"] = True
-                    all_products.append(product)
+
+                # Create a normalized key to catch duplicates with different IDs/URLs
+                # Normalize: lowercase name (first 50 chars) + brand + price
+                name_normalized = product.get("name", "").lower()[:50].strip()
+                brand_normalized = product.get("brand", "").lower().strip()
+                price_key = f"{product.get('price', 0):.2f}"
+                duplicate_key = f"{name_normalized}|{brand_normalized}|{price_key}"
+
+                # Skip if we've seen this exact product OR a near-duplicate
+                if product_key in seen_ids or duplicate_key in seen_products:
+                    continue
+
+                seen_ids.add(product_key)
+                seen_products.add(duplicate_key)
+
+                # Add brand score for curated/editorial/trending brand boosting
+                product["brand_score"] = get_brand_score(product.get("brand", ""))
+                # Mark products from brand queries for potential boost
+                if is_brand_query:
+                    product["from_brand_query"] = True
+                all_products.append(product)
 
     logger.info(f"Fetched {len(all_products)} total products from {len(queries_to_use)} parallel queries")
 
