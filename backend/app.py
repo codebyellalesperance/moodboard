@@ -165,7 +165,9 @@ def moodcheck():
         try:
             logger.info(f"Fetching trend data for '{vibe_name}'...")
             start = time.time()
-            result = get_trend_summary(vibe_name)
+            # Pass style_archetype for smarter keyword extraction
+            style_archetype = mood_profile.get('style_archetype') if mood_profile else None
+            result = get_trend_summary(vibe_name, style_archetype=style_archetype)
             logger.info(f"Trend data fetched in {time.time() - start:.2f}s")
             return result
         except Exception as e:

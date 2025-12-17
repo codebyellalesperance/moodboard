@@ -55,7 +55,33 @@ EDITORIAL_BRANDS = {
     "bottega veneta", "loewe", "celine", "the frankie shop",
     "rohe", "st. agni", "esse studios", "co",
     # Trending Editorial
-    "alaia", "coperni", "self-portrait", "magda butrym", "rotate"
+    "alaia", "coperni", "self-portrait", "magda butrym", "rotate",
+    # Instagram/TikTok Trending
+    "mirror palais", "orseund iris", "reformation", "realisation par",
+    "rat & boa", "danielle guizio", "are you am i", "ronny kobo",
+    "house of cb", "majorelle", "song of style", "lovers + friends"
+}
+
+# Trending brands - TikTok viral, emerging designers, cult favorites
+TRENDING_BRANDS = {
+    "frankie shop", "posse", "sir the label", "matteau", "bondi born",
+    "esse studios", "low classic", "amomento", "baserange", "deveaux",
+    "mirror palais", "orseund iris", "aya muse", "laquan smith",
+    "dion lee", "ottolinger", "misbhv", "charlotte knowles",
+    "selkie", "hill house home", "sister jane", "batsheva",
+    "story mfg", "our legacy", "auralee", "wales bonner"
+}
+
+# BLOCKLIST - Brands to exclude from results (fast fashion, low quality)
+BLOCKED_BRANDS = {
+    # Ultra-fast fashion
+    "shein", "romwe", "zaful", "fashion nova", "prettylittlething",
+    "boohoo", "missguided", "nasty gal", "cider", "halara",
+    # Generic/low quality
+    "aliexpress", "temu", "wish", "dhgate", "banggood",
+    "dresslily", "rosegal", "sammydress", "tidebuy", "lightinthebox",
+    # Amazon generics
+    "amazon essentials", "amazon basics", "generic", "unbranded"
 }
 
 
@@ -165,19 +191,38 @@ def is_trusted_retailer(retailer: str) -> bool:
     return False
 
 
+def is_blocked_brand(brand: str, product_name: str = "") -> bool:
+    """
+    Check if a brand should be excluded from results.
+    Checks both brand field and product name for blocked terms.
+    """
+    brand_lower = brand.lower().strip() if brand else ""
+    name_lower = product_name.lower() if product_name else ""
+
+    for blocked in BLOCKED_BRANDS:
+        if blocked in brand_lower or blocked in name_lower:
+            return True
+    return False
+
+
 def get_brand_score(brand: str) -> int:
     """
     Score brand based on curation lists.
-    Returns: 0=unknown, 1=curated, 2=editorial, 3=both
+    Returns: 0=unknown, 1=curated, 2=trending, 3=editorial, 4=editorial+trending
     """
     if not brand:
         return 0
     brand_lower = brand.lower().strip()
     in_curated = any(c in brand_lower or brand_lower in c for c in CURATED_BRANDS)
     in_editorial = any(e in brand_lower or brand_lower in e for e in EDITORIAL_BRANDS)
-    if in_curated and in_editorial:
-        return 3
+    in_trending = any(t in brand_lower or brand_lower in t for t in TRENDING_BRANDS)
+
+    # Score hierarchy: editorial+trending > editorial > trending > curated > unknown
+    if in_editorial and in_trending:
+        return 4
     elif in_editorial:
+        return 3
+    elif in_trending:
         return 2
     elif in_curated:
         return 1
@@ -207,9 +252,10 @@ def create_brand_queries(
 ) -> List[str]:
     """
     Create brand-specific search queries based on extracted target brands.
+    Prioritizes editorial and trending brands for high-quality results.
 
     Args:
-        target_brands: Dict with 'aspirational', 'contemporary', 'accessible' lists
+        target_brands: Dict with 'aspirational', 'contemporary', 'trending', 'accessible' lists
         key_pieces: List of key pieces from the vibe profile
         budget: User's budget preference (affects which brands to prioritize)
 
@@ -221,21 +267,24 @@ def create_brand_queries(
     # Get brands from each tier
     aspirational = target_brands.get('aspirational', [])[:2]
     contemporary = target_brands.get('contemporary', [])[:2]
+    trending = target_brands.get('trending', [])[:2]  # NEW: trending tier
     accessible = target_brands.get('accessible', [])[:2]
 
     # Select which tiers to use based on budget
+    # Always prioritize trending + contemporary for fashion-forward results
     if budget == "affordable":
-        # Focus on accessible, some contemporary
-        brands_to_use = accessible + contemporary[:1]
+        # Focus on trending + accessible (both can be affordable but stylish)
+        brands_to_use = trending + accessible + contemporary[:1]
     elif budget == "luxury":
-        # Focus on aspirational, some contemporary
-        brands_to_use = aspirational + contemporary[:1]
+        # Focus on aspirational + trending (designer + emerging)
+        brands_to_use = aspirational + trending + contemporary[:1]
     else:
-        # Mix of all tiers (default)
-        brands_to_use = contemporary + accessible[:1] + aspirational[:1]
+        # Default: trending + contemporary + one from each end
+        # This gives the most fashion-forward mix
+        brands_to_use = trending + contemporary + aspirational[:1] + accessible[:1]
 
     # Get a few key pieces to pair with brands
-    pieces_for_brands = key_pieces[:3] if key_pieces else ["clothing", "accessories"]
+    pieces_for_brands = key_pieces[:4] if key_pieces else ["dress", "top", "pants", "bag"]
 
     # Create brand + piece queries
     for brand in brands_to_use:
@@ -244,8 +293,8 @@ def create_brand_queries(
             piece = pieces_for_brands[len(brand_queries) % len(pieces_for_brands)]
             brand_queries.append(f"{brand} {piece} women")
 
-    # Also add some pure brand queries for discovery
-    for brand in brands_to_use[:2]:
+    # Add pure brand queries for discovery (prioritize trending)
+    for brand in (trending + contemporary)[:3]:
         if brand:
             brand_queries.append(f"{brand} new arrivals women")
 
@@ -373,10 +422,14 @@ def search_all_queries(
             products = future.result()
             is_brand_query = query in brand_queries
             for product in products:
+                # QUALITY FILTER: Skip blocked brands (fast fashion, low quality)
+                if is_blocked_brand(product.get("brand", ""), product.get("name", "")):
+                    continue
+
                 product_key = product["id"] + product.get("product_url", "")
                 if product_key not in seen_ids:
                     seen_ids.add(product_key)
-                    # Add brand score for curated/editorial brand boosting
+                    # Add brand score for curated/editorial/trending brand boosting
                     product["brand_score"] = get_brand_score(product.get("brand", ""))
                     # Mark products from brand queries for potential boost
                     if is_brand_query:
@@ -460,8 +513,11 @@ def rerank_products_with_ai(products: List[Dict], vibe_profile: Dict) -> List[Di
     colors = vibe_profile.get('color_palette', [])
     color_names = [c.get('name', '') for c in colors[:5]]
 
-    # Build the visual prompt
-    visual_prompt = f"""You are a fashion stylist curating products for a client. Look at each product image and score how well it VISUALLY matches this aesthetic.
+    # Build trending brands sample
+    trending_sample = ", ".join(list(TRENDING_BRANDS)[:8])
+
+    # Build the visual prompt - emphasize editorial quality
+    visual_prompt = f"""You are a VOGUE FASHION EDITOR curating products for an editorial shoot. Your standards are HIGH - think magazine-worthy, not mall-brand.
 
 AESTHETIC: {vibe_profile.get('name', 'Unknown')}
 MOOD: {vibe_profile.get('mood', '')}
@@ -470,23 +526,27 @@ KEY PIECES: {', '.join(vibe_profile.get('key_pieces', []))}
 TEXTURES TO LOOK FOR: {', '.join(vibe_profile.get('textures', []))}
 AVOID: {', '.join(vibe_profile.get('avoid', []))}
 
-BRAND PREFERENCES (give +1 boost):
-- Premium: {curated_sample}
-- Editorial: {editorial_sample}
+BRAND QUALITY TIERS (give score boosts):
+- Editorial (Vogue-worthy): {editorial_sample} → +2 boost
+- Trending (TikTok/Instagram viral): {trending_sample} → +1 boost
+- Curated (quality contemporary): {curated_sample} → +1 boost
 
 I'm showing you {len(products_for_visual)} product images. For each image (in order), score 1-10:
-- 9-10: Perfect visual match - colors, silhouette, texture all align with the aesthetic
-- 7-8: Strong match - looks like it belongs in this wardrobe
-- 5-6: Decent fit - could work but not ideal
-- 3-4: Weak match - wrong colors, style, or vibe
-- 1-2: Completely wrong aesthetic
+- 9-10: EDITORIAL PERFECTION - Would feature in Vogue, perfect colors/silhouette/quality
+- 7-8: INFLUENCER-WORTHY - Stylish, on-trend, would perform well on Instagram
+- 5-6: ACCEPTABLE - Decent but basic, nothing special
+- 3-4: BELOW STANDARDS - Looks cheap, wrong aesthetic, or dated
+- 1-2: REJECT - Fast fashion quality, completely off-brand
 
-VISUAL SCORING CRITERIA:
-- Does the COLOR match the palette? (Most important)
-- Does the SILHOUETTE match the aesthetic's energy?
-- Does the TEXTURE/MATERIAL look right?
-- Is it a statement piece or interesting detail that elevates the look?
-- Would this photograph well in a mood board with the aesthetic?
+CRITICAL SCORING CRITERIA:
+- Does it look EXPENSIVE and well-made? (Quality over quantity)
+- Would a fashion influencer wear/post this? (Trend-worthiness)
+- Does the COLOR match the palette? (Color harmony)
+- Does the SILHOUETTE feel current and fashion-forward? (Not dated)
+- Does it have interesting DETAILS or is it generic? (Design quality)
+- Would this photograph well in an editorial? (Visual impact)
+
+BE STRICT. We want magazine-quality results, not generic shopping results.
 
 Product details for context:
 """

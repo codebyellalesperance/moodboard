@@ -133,7 +133,14 @@ function TrendCard({ trend }) {
             <div className="flex items-center gap-6">
                 {/* Left: Icon + Label */}
                 <div className="shrink-0 space-y-2">
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)]">Market_Signal</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-text-secondary)]">Market_Signal</p>
+                        {trend.searched_term && trend.searched_term !== trend.keyword && (
+                            <span className="font-mono text-[9px] text-[var(--color-text-tertiary)]">
+                                ({trend.searched_term})
+                            </span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <Icon className={`w-4 h-4 ${colorClass}`} />
                         <span className={`font-mono text-sm uppercase ${colorClass}`}>{label}</span>
