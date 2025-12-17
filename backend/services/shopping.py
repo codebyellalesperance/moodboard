@@ -347,7 +347,34 @@ def search_all_queries(
         x.get("price", 0)                 # Lower prices last
     ))
 
-    return trusted_products[:max_products]
+    # Apply category diversity to ensure mix of tops, bottoms, shoes, accessories, etc.
+    diversified = ensure_category_diversity(
+        trusted_products,
+        max_products=max_products,
+        min_per_category=1,  # Try to include at least 1 from each category
+        max_per_category=4   # Don't let any single category dominate
+    )
+    logger.info(f"After diversity filter: {len(diversified)} products")
+
+    # Build bench of alternative products for coherence swaps
+    diversified_ids = {p.get('id', '') + p.get('product_url', '') for p in diversified}
+    bench_products = [
+        p for p in trusted_products
+        if (p.get('id', '') + p.get('product_url', '')) not in diversified_ids
+        and p.get('vibe_score', 0) >= 5  # Only consider decent alternatives
+    ][:15]  # Keep top 15 alternatives
+
+    # Apply outfit coherence scoring if we have a vibe profile
+    if vibe_profile and len(diversified) >= 5:
+        diversified = score_outfit_coherence(
+            selected_products=diversified,
+            bench_products=bench_products,
+            vibe_profile=vibe_profile,
+            max_swaps=3  # Allow up to 3 items to be swapped for better coherence
+        )
+        logger.info(f"After coherence scoring: {len(diversified)} products")
+
+    return diversified
 
 
 def rerank_products_with_ai(products: List[Dict], vibe_profile: Dict) -> List[Dict]:
@@ -548,6 +575,152 @@ Score 1-10. Return ONLY JSON: [{{"index": 0, "score": 7}}]"""
         return products
 
 
+def score_outfit_coherence(
+    selected_products: List[Dict],
+    bench_products: List[Dict],
+    vibe_profile: Dict,
+    max_swaps: int = 3
+) -> List[Dict]:
+    """
+    Evaluate how well selected products work together as a cohesive outfit/wardrobe.
+    Identifies outliers and swaps them with better-fitting alternatives from the bench.
+
+    Args:
+        selected_products: The current selection (typically 20 items)
+        bench_products: Alternative products that didn't make the initial cut
+        vibe_profile: The aesthetic profile for context
+        max_swaps: Maximum number of items to swap out
+
+    Returns:
+        Refined list with better outfit coherence
+    """
+    if not selected_products or len(selected_products) < 5:
+        return selected_products
+
+    # Limit to 15 products for visual analysis
+    products_to_analyze = selected_products[:15]
+
+    # Build the coherence prompt
+    coherence_prompt = f"""You are a fashion stylist reviewing a curated collection for a client.
+
+AESTHETIC: {vibe_profile.get('name', 'Unknown')}
+MOOD: {vibe_profile.get('mood', '')}
+COLOR PALETTE: {', '.join([c.get('name', '') for c in vibe_profile.get('color_palette', [])[:5]])}
+
+I'm showing you {len(products_to_analyze)} products that have been selected for this aesthetic.
+
+EVALUATE OUTFIT COHERENCE:
+1. Do these items work together as a cohesive wardrobe?
+2. Are there any OUTLIERS that don't fit with the rest?
+3. Consider: color harmony, style consistency, occasion compatibility
+
+For each product (in order), respond with:
+- "keep" if it fits well with the collection
+- "swap" if it's an outlier that doesn't belong
+
+IMPORTANT: Only mark items as "swap" if they truly clash with the overall aesthetic.
+We want a cohesive collection, but some variety is good.
+Maximum {max_swaps} swaps allowed.
+
+Product details:
+"""
+
+    # Add product metadata
+    for i, p in enumerate(products_to_analyze):
+        cat = p.get('_category', 'Unknown')
+        coherence_prompt += f"\nImage {i+1}: [{cat}] {p.get('name', 'Unknown')} - ${p.get('price', 0)}"
+
+    coherence_prompt += f"""
+
+Return ONLY a JSON array with your decisions:
+[{{"index": 1, "decision": "keep", "reason": "matches color palette"}}, {{"index": 2, "decision": "swap", "reason": "too casual for the aesthetic"}}]
+
+Every item needs a decision. Use 1-indexed positions matching the images."""
+
+    # Build multimodal content with images
+    content = [{"type": "text", "text": coherence_prompt}]
+
+    for p in products_to_analyze:
+        image_url = p.get("image_url", "")
+        if image_url:
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url,
+                    "detail": "low"
+                }
+            })
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": content}],
+            max_tokens=1000,
+            temperature=0.3
+        )
+
+        response_text = response.choices[0].message.content.strip()
+
+        # Clean up response
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+
+        decisions = json.loads(response_text)
+
+        # Find items to swap (1-indexed from GPT)
+        swap_indices = []
+        for item in decisions:
+            idx = item.get("index", 0)
+            if item.get("decision") == "swap" and len(swap_indices) < max_swaps:
+                # Convert to 0-indexed
+                if 1 <= idx <= len(products_to_analyze):
+                    swap_indices.append(idx - 1)
+                    logger.info(f"Coherence swap: Item {idx} ({products_to_analyze[idx-1].get('name', '')[:30]}) - {item.get('reason', 'no reason')}")
+
+        if not swap_indices:
+            logger.info("Coherence check: All items fit well together")
+            return selected_products
+
+        # Perform swaps with bench products
+        result = selected_products.copy()
+        bench_idx = 0
+
+        for swap_idx in swap_indices:
+            if swap_idx < len(result) and bench_idx < len(bench_products):
+                # Get the category of the item being swapped
+                swap_category = result[swap_idx].get('_category', 'Other')
+
+                # Try to find a bench product in the same category
+                replacement = None
+                for bp in bench_products[bench_idx:]:
+                    bp_category = detect_product_category(bp.get('name', ''))
+                    if bp_category == swap_category:
+                        replacement = bp
+                        bench_products.remove(bp)
+                        break
+
+                # If no same-category replacement, just take next bench item
+                if not replacement and bench_idx < len(bench_products):
+                    replacement = bench_products[bench_idx]
+                    bench_idx += 1
+
+                if replacement:
+                    replacement['_swapped_in'] = True
+                    replacement['_replaced'] = result[swap_idx].get('name', '')[:30]
+                    result[swap_idx] = replacement
+                    logger.info(f"Swapped in: {replacement.get('name', '')[:30]}")
+
+        logger.info(f"Coherence scoring: {len(swap_indices)} items swapped for better fit")
+        return result
+
+    except Exception as e:
+        logger.error(f"Outfit coherence scoring failed: {e}")
+        return selected_products
+
+
 def detect_budget_from_prompt(prompt: str) -> Optional[str]:
     """Detect budget hints from user prompt."""
     prompt_lower = prompt.lower()
@@ -590,6 +763,128 @@ def detect_item_type_from_prompt(prompt: str) -> Optional[str]:
                 return item_type
 
     return None
+
+
+def detect_product_category(product_name: str) -> str:
+    """
+    Detect the category of a product based on its name.
+    Returns category name or 'Other' if no match found.
+    """
+    name_lower = product_name.lower()
+
+    for category, keywords in ITEM_TYPE_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in name_lower:
+                return category
+
+    return 'Other'
+
+
+def ensure_category_diversity(
+    products: List[Dict],
+    max_products: int = 20,
+    min_per_category: int = 1,
+    max_per_category: int = 4
+) -> List[Dict]:
+    """
+    Ensure diverse category representation in results.
+
+    Strategy:
+    1. Group products by category
+    2. Take top items from each category (sorted by vibe_score)
+    3. Round-robin select to ensure variety
+    4. Fill remaining slots with highest-scored items
+
+    Args:
+        products: List of products (should already be scored)
+        max_products: Maximum number of products to return
+        min_per_category: Try to include at least this many from each category
+        max_per_category: Don't include more than this many from any one category
+
+    Returns:
+        Diversified list of products
+    """
+    if len(products) <= max_products:
+        return products
+
+    # Group by category
+    by_category: Dict[str, List[Dict]] = {}
+    for p in products:
+        cat = detect_product_category(p.get('name', ''))
+        p['_category'] = cat  # Store for debugging
+        if cat not in by_category:
+            by_category[cat] = []
+        by_category[cat].append(p)
+
+    # Sort each category by vibe_score (descending)
+    for cat in by_category:
+        by_category[cat].sort(key=lambda x: x.get('vibe_score', 0), reverse=True)
+
+    logger.info(f"Category distribution before diversity: {{{', '.join(f'{k}: {len(v)}' for k, v in by_category.items())}}}")
+
+    # Priority categories (clothing essentials first, then accessories)
+    priority_order = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Shoes', 'Bags', 'Jewelry', 'Accessories', 'Other']
+
+    diversified = []
+    category_counts = {cat: 0 for cat in priority_order}
+    used_ids = set()
+
+    # Round 1: Take min_per_category from each category that has items
+    for cat in priority_order:
+        if cat in by_category:
+            for p in by_category[cat][:min_per_category]:
+                pid = p.get('id', '') + p.get('product_url', '')
+                if pid not in used_ids and len(diversified) < max_products:
+                    diversified.append(p)
+                    used_ids.add(pid)
+                    category_counts[cat] += 1
+
+    # Round 2: Round-robin fill up to max_per_category
+    slots_remaining = max_products - len(diversified)
+    round_robin_idx = 0
+
+    while slots_remaining > 0:
+        added_this_round = False
+        for cat in priority_order:
+            if cat not in by_category:
+                continue
+            if category_counts[cat] >= max_per_category:
+                continue
+
+            # Find next unused product in this category
+            for p in by_category[cat]:
+                pid = p.get('id', '') + p.get('product_url', '')
+                if pid not in used_ids:
+                    diversified.append(p)
+                    used_ids.add(pid)
+                    category_counts[cat] += 1
+                    slots_remaining -= 1
+                    added_this_round = True
+                    break
+
+            if slots_remaining <= 0:
+                break
+
+        # If we couldn't add anything in a full round, break to avoid infinite loop
+        if not added_this_round:
+            break
+        round_robin_idx += 1
+
+    # Round 3: If we still have slots, fill with highest-scored remaining products
+    if len(diversified) < max_products:
+        remaining = [p for p in products if (p.get('id', '') + p.get('product_url', '')) not in used_ids]
+        remaining.sort(key=lambda x: x.get('vibe_score', 0), reverse=True)
+        for p in remaining:
+            if len(diversified) >= max_products:
+                break
+            diversified.append(p)
+
+    # Final sort by vibe_score to present best items first
+    diversified.sort(key=lambda x: x.get('vibe_score', 0), reverse=True)
+
+    logger.info(f"Category distribution after diversity: {{{', '.join(f'{k}: {v}' for k, v in category_counts.items() if v > 0)}}}")
+
+    return diversified
 
 
 def filter_by_item_type(products: List[Dict], item_type: str) -> List[Dict]:
