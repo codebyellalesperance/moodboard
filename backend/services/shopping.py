@@ -398,10 +398,10 @@ def search_all_queries(
             color_queries = create_color_queries(color_palette, key_pieces, search_queries)
             logger.info(f"Color queries: {color_queries}")
 
-    # Combine: 4 base + 3 brand + 3 color = 10 parallel searches
-    queries_to_use = base_queries + brand_queries[:3] + color_queries[:3]
+    # Combine: 4 base + 4 brand + 4 color = 12 parallel searches
+    queries_to_use = base_queries + brand_queries[:4] + color_queries[:4]
     logger.info(f"Total queries ({len(queries_to_use)}): {queries_to_use}")
-    products_per_query = 10  # Get 10 products per query
+    products_per_query = 20  # Get 20 products per query = ~200 total
 
     # Run all queries in parallel for speed
     def fetch_query(query):
@@ -527,10 +527,10 @@ def rerank_products_with_ai(products: List[Dict], vibe_profile: Dict) -> List[Di
     if not products:
         return []
 
-    # Limit to 15 products for visual analysis (API handles ~15-20 images well)
-    # We'll score the rest with text-only as fallback
-    products_for_visual = products[:15]
-    products_text_only = products[15:30] if len(products) > 15 else []
+    # Limit to 20 products for visual analysis (GPT-4o handles 20 images well)
+    # Score next batch with text-only as fallback
+    products_for_visual = products[:20]
+    products_text_only = products[20:50] if len(products) > 20 else []
 
     # Build brand guidance
     curated_sample = ", ".join(list(CURATED_BRANDS)[:8])
@@ -651,17 +651,17 @@ Product details for context:
         # Sort by score descending
         scored_products.sort(key=lambda x: x.get("vibe_score", 0), reverse=True)
 
-        # Don't include unscored products (31+) - they haven't been validated
+        # Don't include unscored products (51+) - they haven't been validated
         # If we need more products, the caller should request more queries
-        if len(products) > 30:
-            logger.info(f"Skipping {len(products) - 30} unanalyzed products")
+        if len(products) > 50:
+            logger.info(f"Skipping {len(products) - 50} unanalyzed products")
 
         return scored_products
 
     except Exception as e:
         logger.error(f"Visual re-ranking failed: {e}")
         # Fall back to text-only ranking
-        return _rerank_text_only(products[:30], vibe_profile)
+        return _rerank_text_only(products[:50], vibe_profile)
 
 
 def _rerank_text_only(products: List[Dict], vibe_profile: Dict) -> List[Dict]:
