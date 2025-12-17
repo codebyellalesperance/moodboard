@@ -1,15 +1,20 @@
 import { ExternalLink } from 'lucide-react'
 
 function ProductCard({ product, index = 0 }) {
-    const handleClick = () => {
-        window.open(product.product_url, '_blank')
-    }
+    const productUrl = product.product_url || product.link || '#'
 
     return (
-        <div
-            onClick={handleClick}
-            className="group relative cursor-pointer animate-scale-in opacity-0"
+        <a
+            href={productUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative block cursor-pointer animate-scale-in opacity-0"
             style={{ animationDelay: `${index * 0.08}s`, animationFillMode: 'forwards' }}
+            onClick={(e) => {
+                if (productUrl === '#') {
+                    e.preventDefault()
+                }
+            }}
         >
             {/* Image Container */}
             <div className="relative aspect-[3/4] overflow-hidden bg-[var(--bg-secondary)] mb-4">
@@ -54,7 +59,7 @@ function ProductCard({ product, index = 0 }) {
                     ${product.price}
                 </span>
             </div>
-        </div>
+        </a>
     )
 }
 
