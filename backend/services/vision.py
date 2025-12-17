@@ -97,6 +97,46 @@ EDITORIAL_BRANDS = {
         "aspirational": ["Zimmermann", "Johanna Ortiz", "Adriana Degreas", "Agua by Agua Bendita", "Cult Gaia"],
         "contemporary": ["Farm Rio", "Solid & Striped", "Faithfull the Brand", "Mara Hoffman", "Miguelina"],
         "trending": ["Hunza G", "Frankies Bikinis", "Montce", "Vitamin A", "Agua Bendita"]
+    },
+    "athleisure": {
+        "aspirational": ["Lululemon", "Alo Yoga", "Varley", "Splits59", "Lucas Hugh"],
+        "contemporary": ["Girlfriend Collective", "Outdoor Voices", "Vuori", "Beyond Yoga", "Sweaty Betty"],
+        "trending": ["Set Active", "Avia", "Tala", "Year of Ours", "P.E Nation"]
+    },
+    "western": {
+        "aspirational": ["Ralph Lauren", "Isabel Marant", "Etro", "Chloe", "Coach"],
+        "contemporary": ["Free People", "Understated Leather", "Tecovas", "Lucchese", "Double D Ranch"],
+        "trending": ["Miron Crosby", "City Boots", "Brother Vellies", "R13", "Ganni"]
+    },
+    "parisian": {
+        "aspirational": ["Celine", "The Row", "Isabel Marant", "Chanel", "Saint Laurent"],
+        "contemporary": ["Sezane", "Rouje", "Ba&sh", "Maje", "Sandro"],
+        "trending": ["Musier Paris", "Jacquemus", "Lemaire", "The Frankie Shop", "Toteme"]
+    },
+    "glamorous": {
+        "aspirational": ["Versace", "Dolce & Gabbana", "Balmain", "Tom Ford", "Saint Laurent"],
+        "contemporary": ["Retrofete", "Nadine Merabi", "Bronx and Banco", "Zhivago", "Amanda Uprichard"],
+        "trending": ["LaQuan Smith", "David Koma", "Alex Perry", "Magda Butrym", "16Arlington"]
+    },
+    "mob wife": {
+        "aspirational": ["Dolce & Gabbana", "Versace", "Roberto Cavalli", "Tom Ford", "Max Mara"],
+        "contemporary": ["Nili Lotan", "The Mannei", "Anine Bing", "Stand Studio", "Apparis"],
+        "trending": ["Weworewhat", "House of Sunny", "I.AM.GIA", "Poster Girl", "Miaou"]
+    },
+    "cottagecore": {
+        "aspirational": ["Zimmermann", "Ulla Johnson", "Doen", "Brock Collection", "Erdem"],
+        "contemporary": ["Christy Dawn", "Doen", "Hill House Home", "Reformation", "Sezane"],
+        "trending": ["Lirika Matoshi", "Selkie", "Sister Jane", "Nobody's Child", "& Other Stories"]
+    },
+    "scandinavian": {
+        "aspirational": ["Toteme", "Acne Studios", "Ganni", "The Row", "Jil Sander"],
+        "contemporary": ["COS", "Arket", "& Other Stories", "Filippa K", "Holzweiler"],
+        "trending": ["Cecilie Bahnsen", "Stine Goya", "Rotate", "Remain Birger Christensen", "Rodebjer"]
+    },
+    "corporate": {
+        "aspirational": ["The Row", "Max Mara", "Loro Piana", "Bottega Veneta", "Celine"],
+        "contemporary": ["Theory", "Vince", "Reiss", "Hugo Boss", "Argent"],
+        "trending": ["Frankie Shop", "Esse Studios", "Low Classic", "Gauge81", "St. Agni"]
     }
 }
 
@@ -120,7 +160,9 @@ Return a JSON object with EXACTLY these fields (no additional text, just JSON):
   "style_archetype": {{
     "primary": "The dominant style archetype (e.g., 'minimalist', 'boho', 'dark academia', 'old money')",
     "secondary": "A complementary style influence, or null if pure single style",
-    "description": "1-2 sentences explaining how these archetypes manifest in this specific aesthetic"
+    "description": "1-2 sentences explain
+    
+    ing how these archetypes manifest in this specific aesthetic"
   }},
 
   "occasions": [
